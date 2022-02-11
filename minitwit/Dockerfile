@@ -7,12 +7,13 @@ RUN mvn clean compile assembly:single
 FROM openjdk:17-slim
 RUN useradd minitwit && \
     mkdir /app && \
-    #touch /app/minitwit.db && \
-    chown -R minitwit:minitwit /app
+    mkdir /data && \
+    chown -R minitwit:minitwit /data
 USER minitwit
 WORKDIR /app
+ENV MINITWIT_DB_PATH=/data/minitwit.db
 # The output filename depends on what's in pom.xml
 COPY --from=0 /usr/src/minitwit/target/minitwit-1.0-SNAPSHOT-jar-with-dependencies.jar ./
-RUN java -cp minitwit-1.0-SNAPSHOT-jar-with-dependencies.jar:. SQLite
+COPY --from=0 /usr/src/minitwit/control.sh ./
 EXPOSE 8080
-ENTRYPOINT [ "java", "-jar", "minitwit-1.0-SNAPSHOT-jar-with-dependencies.jar" ]
+ENTRYPOINT [ "./control.sh", "init-and-start" ]

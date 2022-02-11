@@ -11,13 +11,13 @@ import java.sql.Statement;
 public class SQLite {
     private Connection connection = null;
 
-    public Connection connect(String file) throws SQLException {
+    public Connection connect() throws SQLException {
+        var file = System.getenv("MINITWIT_DB_PATH");
+        if (file == null) {
+            file = "minitwit.db";
+        }
         connection = DriverManager.getConnection("jdbc:sqlite:" + file);
         return connection;
-    }
-
-    public Connection connect() throws SQLException {
-        return connect("minitwit.db");
     }
 
     public Connection getConnection() throws SQLException {
