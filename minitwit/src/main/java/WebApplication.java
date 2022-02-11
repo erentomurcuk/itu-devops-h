@@ -2,6 +2,7 @@ import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.VelocityEngine;
 import org.apache.velocity.runtime.RuntimeConstants;
 import org.apache.velocity.runtime.resource.loader.ClasspathResourceLoader;
+import org.springframework.security.crypto.bcrypt.BCrypt;
 import spark.*;
 import static spark.Spark.*;
 import org.apache.velocity.Template;
@@ -121,9 +122,12 @@ public class WebApplication {
                     var conn = new SQLite().getConnection();
                     var insert = conn.prepareStatement("insert into user (\n" +
                             "                username, email, pw_hash) values (?, ?, ?)");
+
+                    String saltedPW = BCrypt.hashpw(request.queryParams("password"), BCrypt.gensalt());
+
                     insert.setString(1, request.queryParams("username"));
                     insert.setString(2, request.queryParams("email"));
-                    insert.setString(3, request.queryParams("password"));
+                    insert.setString(3, saltedPW);
                     insert.execute();
 
                     // TODO: splash "You were successfully registered and can login now"
