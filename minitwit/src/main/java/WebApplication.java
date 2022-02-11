@@ -18,11 +18,13 @@ import java.util.Map;
 public class WebApplication {
     public static class Templates {
         public static final String PUBLIC_TIMELINE = "/templates/timeline.vm";
+        public static final String REGISTER = "/templates/register.vm";
     }
     public static class URLS {
         public static final String PUBLIC_TIMELINE = "/public";
         public static final String USER_TIMELINE = "/<username>"; // TODO
         public static final String USER = "/";
+        public static final String REGISTER = "/register";
     }
 
     public static void main(String[] args) {
@@ -33,6 +35,8 @@ public class WebApplication {
         staticFiles.location("/static");
         get("/hello", (req, res) -> "Hello");
         get(URLS.PUBLIC_TIMELINE, WebApplication.servePublicTimelinePage);
+        get(URLS.REGISTER, WebApplication.serveRegisterPage);
+        post(URLS.REGISTER, WebApplication.serveRegisterPage);
     }
 
     public static String render(Map<String, Object> model, String templatePath) {
@@ -77,5 +81,61 @@ public class WebApplication {
         model.put("title", "Public timeline");
 
         return WebApplication.render(model, WebApplication.Templates.PUBLIC_TIMELINE);
+    };
+
+    public static Route serveRegisterPage = (Request request, Response response) -> {
+        Map<String, Object> model = new HashMap<>();
+
+        // TODO: Get logged in user (if any)
+        // if (userIsLoggedIn) {
+        //     response.redirect(URLS.LOGIN);
+        //     return;
+        // }
+
+        // TODO: Port flask "flashes"
+        model.put("messages", new ArrayList<String>() {});
+        //model.put("splash", URLS.PUBLIC_TIMELINE);
+        model.put("username", request.queryParams("username") == null ? "" : request.queryParams("username"));
+        model.put("email", request.queryParams("email") == null ? "" : request.queryParams("email"));
+
+        if (request.requestMethod().equals("POST")) {
+            if (request.queryParams("username") == null
+                    || request.queryParams("username").equals("")) {
+                model.put("error", "You have to enter a username");
+            }
+            else if (request.queryParams("email") == null
+                    || request.queryParams("email").equals("")
+                    || !request.queryParams("email").contains("@")) {
+                model.put("error", "You have to enter a valid email");
+            }
+            else if (request.queryParams("password") == null
+                    || request.queryParams("password2") == null) {
+                model.put("error", "You have to enter a password");
+            }
+            else if (!request.queryParams("password").equals(request.queryParams("password2"))) {
+                model.put("error", "YThe two passwords do not match");
+            }
+            // TODO: get_user_id
+            else {
+                try {
+                    var conn = new SQLite().getConnection();
+                    var insert = conn.prepareStatement("insert into user (\n" +
+                            "                username, email, pw_hash) values (?, ?, ?)");
+                    insert.setString(1, request.queryParams("username"));
+                    insert.setString(2, request.queryParams("email"));
+                    insert.setString(3, request.queryParams("password"));
+                    insert.execute();
+
+                    // TODO: splash "You were successfully registered and can login now"
+
+                    response.redirect(/*URLS.LOGIN*/ "/login"); // TODO: use constant
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    return e.toString();
+                }
+            }
+        }
+
+        return WebApplication.render(model, WebApplication.Templates.REGISTER);
     };
 }
