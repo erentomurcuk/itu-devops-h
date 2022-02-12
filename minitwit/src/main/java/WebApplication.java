@@ -30,6 +30,8 @@ public class WebApplication {
         public static final String REGISTER = "/register";
     }
 
+    public static int PER_PAGE = 30;
+
     public static void main(String[] args) {
         System.out.println("Hello Minitwit");
 
@@ -40,6 +42,7 @@ public class WebApplication {
         get(URLS.PUBLIC_TIMELINE, WebApplication.servePublicTimelinePage);
         get(URLS.REGISTER, WebApplication.serveRegisterPage);
         post(URLS.REGISTER, WebApplication.serveRegisterPage);
+        get(URLS.USER, WebApplication.serveUserTimelinePage);
     }
 
     public static int getUserID(SQLite db, String username) throws SQLException {
@@ -97,6 +100,51 @@ public class WebApplication {
         model.put("splash", URLS.PUBLIC_TIMELINE);
         // Where does this come from in python?
         model.put("title", "Public timeline");
+
+        return WebApplication.render(model, WebApplication.Templates.PUBLIC_TIMELINE);
+    };
+
+    public static Route serveUserTimelinePage = (Request request, Response response) -> {
+        Map<String, Object> model = new HashMap<>();
+        // TODO: Get logged in user (if any)
+        if (false) {
+            response.redirect(URLS.PUBLIC_TIMELINE);
+        }
+        // TODO: Port flask "flashes"
+
+        model.put("splash", URLS.USER);
+        // Where does this come from in python?
+        model.put("title", "Public timeline");
+
+        var db = new SQLite();
+        var conn = db.getConnection();
+        var statement = conn.prepareStatement(
+            "        select message.*, user.* from message, user\n" +
+                "        where message.flagged = 0 and message.author_id = user.user_id and (\n" +
+                "            user.user_id = ? or\n" +
+                "            user.user_id in (select whom_id from follower\n" +
+                "                                    where who_id = ?))\n" +
+                "        order by message.pub_date desc limit ?");
+
+        statement.setInt(1, 1); // TODO: user id
+        statement.setInt(2, 1); // TODO: user id
+        statement.setInt(3, WebApplication.PER_PAGE);
+        ResultSet rs = statement.executeQuery();
+
+        var results = new ArrayList<HashMap<String, Object>>();
+        while (rs.next()) {
+            var result = new HashMap();
+            result.put("message_id", rs.getInt("message_id"));
+            result.put("author_id", rs.getInt("author_id"));
+            result.put("text", rs.getString("text"));
+            result.put("pub_date", rs.getString("pub_date")); // Type?
+            result.put("flagged", rs.getInt("flagged"));
+            result.put("username", rs.getString("username"));
+            result.put("email", rs.getString("email"));
+            result.put("pw_hash", rs.getString("pw_hash"));
+            results.add(result);
+        }
+        model.put("messages", results);
 
         return WebApplication.render(model, WebApplication.Templates.PUBLIC_TIMELINE);
     };
