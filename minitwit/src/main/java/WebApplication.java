@@ -1,22 +1,17 @@
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.VelocityEngine;
-import org.apache.velocity.runtime.RuntimeConstants;
-import org.apache.velocity.runtime.resource.loader.ClasspathResourceLoader;
 import org.springframework.security.crypto.bcrypt.BCrypt;
 import spark.*;
 import static spark.Spark.*;
 import org.apache.velocity.Template;
-import spark.resource.ClassPathResource;
 
 import java.io.StringWriter;
-import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 public class WebApplication {
     public static class Templates {
@@ -28,6 +23,7 @@ public class WebApplication {
         public static final String USER_TIMELINE = "/<username>"; // TODO
         public static final String USER = "/";
         public static final String REGISTER = "/register";
+        public static final String ADD_MESSAGE = "/add_message";
     }
 
     public static void main(String[] args) {
@@ -84,6 +80,41 @@ public class WebApplication {
         }
     }
 
+    public static Route add_message = (Request request, Response response)  -> {
+        Map<String, Object> model = new HashMap<>();
+
+        try {
+            var db = new SQLite();
+            var conn = db.getConnection();
+
+
+            if (request.queryParams("user_id")) { // Python: # if 'user_id' not in session: #
+                // httpResponse.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorised"); // Do we need to use this?
+                halt(401);
+            }
+
+            if (request.requestMethod().equals("POST")) { //I'm incredibly unsure of this one too, checked them out online but failed to come out with stuff.
+                var insert = conn.prepareStatement("insert into message (author_id, text, pub_date, flagged)\n" +
+                        "            values (?, ?, ?, 0)");
+
+                insert.setString(1, request.queryParams("author_id"));
+                insert.setString(2, request.queryParams("email"));
+                insert.setString(3, request.queryParams("pub_date"));
+
+                insert.execute();
+
+                // TODO: Still no flask flashes here
+            }
+        }
+
+        catch (Exception e) {
+            e.printStackTrace();
+            return e.toString();
+        }
+
+        return WebApplication.render(model, Templates.PUBLIC_TIMELINE);
+    };
+
     public static Route servePublicTimelinePage = (Request request, Response response) -> {
         Map<String, Object> model = new HashMap<>();
         // TODO: Get logged in user (if any)
@@ -137,7 +168,7 @@ public class WebApplication {
                     model.put("error", "You have to enter a password");
                 }
                 else if (!request.queryParams("password").equals(request.queryParams("password2"))) {
-                    model.put("error", "YThe two passwords do not match");
+                    model.put("error", "The two passwords do not match");
                 }
                 else if (getUserID(db, request.queryParams("username")) != 0) {
                     model.put("error", "The username is already taken");
