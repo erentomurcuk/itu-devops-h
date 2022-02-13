@@ -1,3 +1,8 @@
+/* 
+This file is from the original MiniTwit project written in Python, given to us
+by the teachers of the course.
+*/
+
 #include <sqlite3.h>
 #include <stdio.h>
 #include <stdlib.h>
