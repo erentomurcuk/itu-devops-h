@@ -29,6 +29,7 @@ public class WebApplication {
         public static final String USER_TIMELINE = "/<username>"; // TODO
         public static final String USER = "/";
         public static final String LOGIN = "/login";
+        public static final String LOGOUT = "/logout";
         public static final String REGISTER = "/register";
     }
 
@@ -42,9 +43,22 @@ public class WebApplication {
         get(URLS.PUBLIC_TIMELINE, WebApplication.servePublicTimelinePage);
         get(URLS.REGISTER, WebApplication.serveRegisterPage);
         get(URLS.LOGIN, WebApplication.serveLoginPage);
+        post(URLS.LOGOUT, handleLogoutRequest);
 
         post(URLS.REGISTER, WebApplication.serveRegisterPage);
         post(URLS.LOGIN, WebApplication.serveLoginPage);
+    }
+
+    public static ResultSet getUser(SQLite db, Integer userId) throws SQLException {
+        if (userId == null) return null;
+
+        var conn = db.getConnection();
+        var statement = conn.prepareStatement("select * from user where user_id = ?");
+
+        statement.setInt(1, userId);
+        ResultSet rs = statement.executeQuery();
+
+        return rs;
     }
 
     public static int getUserID(SQLite db, String username) throws SQLException {
@@ -92,7 +106,12 @@ public class WebApplication {
     public static Route servePublicTimelinePage = (Request request, Response response) -> {
         Map<String, Object> model = new HashMap<>();
         // TODO: Get logged in user (if any)
-        // model.put("user", loggedInUser);
+        var userID = (Integer) request.session().attribute("user_id");
+        System.out.println("after uid define :" + userID);
+        var loggedInUser = getUser(new SQLite(), (userID));
+
+        System.out.println("before model.put: " + userID);
+        if (loggedInUser != null) model.put("user", loggedInUser.getString("username"));
         // TODO: Port flask "flashes"
         model.put("messages", new ArrayList<String>() {
             {
@@ -103,6 +122,9 @@ public class WebApplication {
         // Where does this come from in python?
         model.put("title", "Public timeline");
         model.put("login", URLS.LOGIN);
+
+        // Debugging help
+        System.out.println((Integer) request.session().attribute("user_id"));
 
         return WebApplication.render(model, WebApplication.Templates.PUBLIC_TIMELINE);
     };
@@ -192,12 +214,20 @@ public class WebApplication {
                 if (enteredPW == null || enteredPW.equals("") ) {
                     model.put("error", "Invalid Password");
                 }
+                else if (rs == null) {
+                    model.put("error", "Invalid username");
+                }
                 else {
                     var matchPW = BCrypt.checkpw(enteredPW, passwordHash);
                     if(matchPW) {
                         model.put("user", username);
+                        var userID = rs.getInt("user_id");
 
+                        request.session().attribute("user_id", userID);
                         response.redirect(URLS.PUBLIC_TIMELINE);
+
+                        //Debugging stuff
+                        System.out.println((int) request.session().attribute("user_id")); //DEBUG
                     }
                     else {
                         model.put("error", "Invalid password");
@@ -209,4 +239,14 @@ public class WebApplication {
         return render(model, Templates.LOGIN);
     };
 
+    public static Route handleLogoutRequest = (Request request, Response response) -> {
+        Map<String, Object> model = new HashMap<>();
+
+        System.out.println("Logout 1 : " + (Integer) request.session().attribute("user_id"));
+        request.session().removeAttribute("user_id");
+
+        System.out.println("Logout 2 : " + (Integer) request.session().attribute("user_id")); // DEBUG
+        response.redirect(URLS.PUBLIC_TIMELINE);
+        return null;
+    };
 }
