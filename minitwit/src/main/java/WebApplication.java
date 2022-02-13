@@ -89,15 +89,15 @@ public class WebApplication {
 
             if (request.session().attribute(request.queryParams("user_id")) == null) { // Python: # if 'user_id' not in session: #
                 // httpResponse.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorised"); // Do we need to use this?
-                halt(401);
+                response.status(401);
             }
 
             if (request.requestMethod().equals("POST")) { //I'm incredibly unsure of this one too, checked them out online but failed to come out with stuff.
                 var insert = conn.prepareStatement("insert into message (author_id, text, pub_date, flagged)\n" +
                         "            values (?, ?, ?, 0)");
 
-                insert.setString(1, request.queryParams("author_id"));
-                insert.setString(2, request.queryParams("email"));
+                insert.setString(1, request.session().attribute("author_id"));
+                insert.setString(2, request.queryParams("text"));
                 insert.setString(3, request.queryParams("pub_date"));
 
                 insert.execute();
