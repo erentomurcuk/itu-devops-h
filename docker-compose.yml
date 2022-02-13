@@ -1,0 +1,12 @@
+services:
+  app:
+    build:
+      context: minitwit
+    ports:
+      - 8080:8080
+    environment:
+      - MINITWIT_DB_PATH=/data/minitwit.db
+    volumes:
+      - minitwitdb:/data
+volumes:
+  minitwitdb: {}
