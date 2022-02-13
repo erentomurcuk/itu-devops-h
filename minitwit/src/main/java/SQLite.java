@@ -1,9 +1,7 @@
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URISyntaxException;
-import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -14,8 +12,11 @@ public class SQLite {
     private Connection connection = null;
 
     public Connection connect() throws SQLException {
-        // create a database connection
-        connection = DriverManager.getConnection("jdbc:sqlite:minitwit.db");
+        var file = System.getenv("MINITWIT_DB_PATH");
+        if (file == null) {
+            file = "minitwit.db";
+        }
+        connection = DriverManager.getConnection("jdbc:sqlite:" + file);
         return connection;
     }
 
@@ -30,12 +31,10 @@ public class SQLite {
     public void init() throws SQLException, URISyntaxException, IOException {
         Connection connection = getConnection();
 
-        // Read the schema file from resources
-        URL schemaResource = getClass()
-                .getClassLoader()
-                .getResource("schema.sql");
-        Path schemaPath = Path.of(schemaResource.toURI());
-        String schema = Files.readString(schemaPath);
+        String schema;
+        InputStream in = getClass().getResourceAsStream("schema.sql");
+        schema = new String(in.readAllBytes());
+
         String[] schemaStatements = schema.split(";");
 
         // Run the sql in the schema file on the database
