@@ -28,6 +28,8 @@ public class WebApplication {
         public static final String USER_TIMELINE = "/:username";
         public static final String USER = "/";
         public static final String REGISTER = "/register";
+        public static final String FOLLOW = "/:username/follow";
+        public static final String UNFOLLOW = "/:username/unfollow";
     }
 
     public static int PER_PAGE = 30;
@@ -42,6 +44,8 @@ public class WebApplication {
         get(URLS.PUBLIC_TIMELINE, WebApplication.servePublicTimelinePage);
         get(URLS.REGISTER, WebApplication.serveRegisterPage);
         post(URLS.REGISTER, WebApplication.serveRegisterPage);
+        post(URLS.FOLLOW, WebApplication.serveFollowPage);
+        post(URLS.UNFOLLOW, WebApplication.serveUnfollowPage);
         get(URLS.USER, WebApplication.serveUserTimelinePage);
         get(URLS.USER_TIMELINE, WebApplication.serveUserByUsernameTimelinePage);
     }
@@ -87,6 +91,44 @@ public class WebApplication {
             return e.toString();
         }
     }
+
+    public static Route serveFollowPage = (Request request, Response response) -> {
+
+        var db = new SQLite();
+        var conn = db.getConnection();
+
+        var insert = conn.prepareStatement("insert into follower (\n" +
+                "                who_id, whom_id) values (?, ?)");
+
+        var whom_id = getUserID(db, request.params(":username"));
+
+        insert.setInt(1, 999); //TODO: Get current users_id
+        insert.setInt(2, whom_id);
+        insert.execute();
+
+        conn.close();
+
+        return true;
+    };
+
+    public static Route serveUnfollowPage = (Request request, Response response) -> {
+
+        var db = new SQLite();
+        var conn = db.getConnection();
+
+        var insert = conn.prepareStatement("delete from follower where who_id=? and whom_id=?");
+
+        var whom_id = getUserID(db, request.params(":username"));
+
+        insert.setInt(1, 999); //TODO: Get current users_id
+        insert.setInt(2, whom_id);
+        insert.execute();
+
+        conn.close();
+
+        return true;
+    };
+
 
     public static Route servePublicTimelinePage = (Request request, Response response) -> {
         try {
@@ -266,7 +308,7 @@ public class WebApplication {
                     model.put("error", "You have to enter a password");
                 }
                 else if (!request.queryParams("password").equals(request.queryParams("password2"))) {
-                    model.put("error", "YThe two passwords do not match");
+                    model.put("error", "The two passwords do not match");
                 }
                 else if (getUserID(db, request.queryParams("username")) != 0) {
                     model.put("error", "The username is already taken");
