@@ -28,6 +28,7 @@ public class WebApplication {
         public static final String USER_TIMELINE = "/:username";
         public static final String USER = "/";
         public static final String REGISTER = "/register";
+        public static final String ADD_MESSAGE = "/add_message";
         public static final String FOLLOW = "/:username/follow";
         public static final String UNFOLLOW = "/:username/unfollow";
     }
@@ -44,6 +45,7 @@ public class WebApplication {
         get(URLS.PUBLIC_TIMELINE, WebApplication.servePublicTimelinePage);
         get(URLS.REGISTER, WebApplication.serveRegisterPage);
         post(URLS.REGISTER, WebApplication.serveRegisterPage);
+        post(URLS.ADD_MESSAGE, WebApplication.add_message);
         post(URLS.FOLLOW, WebApplication.serveFollowPage);
         post(URLS.UNFOLLOW, WebApplication.serveUnfollowPage);
         get(URLS.USER, WebApplication.serveUserTimelinePage);
@@ -92,6 +94,46 @@ public class WebApplication {
         }
     }
 
+
+    public static Route add_message = (Request request, Response response)  -> {
+        Map<String, Object> model = new HashMap<>();
+
+        try {
+            var db = new SQLite();
+            var conn = db.getConnection();
+
+            if (request.session().attribute(request.queryParams("user_id")) == null) { // Python: # if 'user_id' not in session: #
+                // httpResponse.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorised"); // Do we need to use this?
+                response.status(401);
+            }
+
+                var insert = conn.prepareStatement("insert into message (author_id, text, pub_date, flagged)\n" +
+                        "            values (?, ?, ?, 0)");
+
+                long unixTime = System.currentTimeMillis() / 1000L;
+
+                insert.setString(1, request.session().attribute("author_id"));
+                insert.setString(2, request.queryParams("text"));
+                insert.setLong(3, unixTime);
+
+                insert.execute();
+
+                conn.close();
+
+                // TODO: Still no flask flashes here
+
+        }
+
+        catch (Exception e) {
+            e.printStackTrace();
+            return e.toString();
+
+        }
+
+        response.redirect(Templates.PUBLIC_TIMELINE);
+        return WebApplication.render(model, Templates.PUBLIC_TIMELINE);
+    };
+
     public static Route serveFollowPage = (Request request, Response response) -> {
 
         var db = new SQLite();
@@ -128,7 +170,6 @@ public class WebApplication {
 
         return true;
     };
-
 
     public static Route servePublicTimelinePage = (Request request, Response response) -> {
         try {
