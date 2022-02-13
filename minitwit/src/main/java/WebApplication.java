@@ -315,50 +315,37 @@ public class WebApplication {
     };
 
     public static Route serveLoginPage = (Request request, Response response) -> {
-        var db = new SQLite();
-        var connection = db.getConnection();
-        var lookup = connection.prepareStatement("select * from user where\n" +
-                "            username = ?");
+        if(request.session().attribute("user_id") != null) {
+            response.redirect(URLS.USER);
+        }
         Map<String, Object> model = new HashMap<>();
 
         var enteredUserName = request.queryParams("username");
         var enteredPW = request.queryParams("password");
 
         if (request.requestMethod().equals("POST")) {
-            if (enteredUserName==null || enteredUserName.equals("")) {
+            var db = new SQLite();
+            var connection = db.getConnection();
+            var lookup = connection.prepareStatement("select * from user where\n" +
+                    "            username = ?");
+            lookup.setString(1, enteredUserName);
+            ResultSet rs = lookup.executeQuery();
+            var username = rs.getString("username");
+            var passwordHash = rs.getString("pw_hash");
+
+            if (rs.wasNull()) {
                 model.put("error", "Invalid username");
             }
-            else{
-                lookup.setString(1, enteredUserName);
-                ResultSet rs = lookup.executeQuery();
-                var username = rs.getString("username");
-                var passwordHash = rs.getString("pw_hash");/**/
+            else if (!BCrypt.checkpw(enteredPW, passwordHash)) {
+                model.put("error", "Invalid Password");
+            }
+            else {
+                var userID = rs.getInt("user_id");
 
-                if (enteredPW == null || enteredPW.equals("") ) {
-                    model.put("error", "Invalid Password");
-                }
-                else if (rs == null) {
-                    model.put("error", "Invalid username");
-                }
-                else {
-                    var matchPW = BCrypt.checkpw(enteredPW, passwordHash);
-                    if(matchPW) {
-                        model.put("user", username);
-                        var userID = rs.getInt("user_id");
-
-                        request.session().attribute("user_id", userID);
-                        response.redirect(URLS.PUBLIC_TIMELINE);
-
-                        //Debugging stuff
-                        System.out.println((int) request.session().attribute("user_id")); //DEBUG
-                    }
-                    else {
-                        model.put("error", "Invalid password");
-                    }
-                }
+                request.session().attribute("user_id", userID);
+                response.redirect(URLS.USER);
             }
         }
-        //model.put("messages", new ArrayList<>());
         return render(model, Templates.LOGIN);
     };
 
