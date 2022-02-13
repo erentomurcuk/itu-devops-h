@@ -19,6 +19,16 @@ function build {
         cp target/minitwit-1.0-SNAPSHOT-jar-with-dependencies.jar ./minitwit.jar
 }
 
+function build-in-docker {
+    images=$( sudo docker images | grep minitwit-builder )
+    if [ -z $images ]
+    then
+        docker build --tag minitwit-builder -f ./Dockerfile_build .
+    fi
+    docker run --volume /tmp/minitwit:/out minitwit-builder
+    cp /tmp/minitwit/minitwit.jar ./
+}
+
 if [ "$1" = "init-and-start" ]
 then
     if [ ! -e $MINITWIT_DB_PATH ]
@@ -36,15 +46,21 @@ then
 elif [ "$1" = "build" ]
 then
     build
+elif [ "$1" = "build-in-docker" ]
+then
+    build-in-docker
 else
     cat << EOF
 control.sh <command>
 
 Commands:
-init:           Initialize database, will overwrite old.
-start:          Start minitwit server using jar file in this directory.
-init-and-start: Initializes the database if the database file does not exist
-                yet and start server.
-build:          Build and package jar file
+init:               Initialize database, will overwrite old.
+start:              Start minitwit server using jar file in this directory.
+init-and-start:     Initializes the database if the database file does not exist
+                    yet and start server.
+build:              Build and package jar file.
+build-with-docker:  Build and package jar file in a docker container, and copy jar
+                    file into this directory. Useful for building without having
+                    a JDK and Maven installation.
 EOF
 fi
