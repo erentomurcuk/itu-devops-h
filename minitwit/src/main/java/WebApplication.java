@@ -28,7 +28,7 @@ public class WebApplication {
         public static final String USER_TIMELINE = "/<username>"; // TODO
         public static final String USER = "/";
         public static final String REGISTER = "/register";
-        public static final String ADD_MESSAGE = ":add_message";
+        public static final String ADD_MESSAGE = "/add_message";
     }
 
     public static void main(String[] args) {
@@ -97,8 +97,7 @@ public class WebApplication {
                 // httpResponse.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorised"); // Do we need to use this?
                 response.status(401);
             }
-
-            if (request.requestMethod().equals("POST")) { //I'm incredibly unsure of this one too, checked them out online but failed to come out with stuff.
+            
                 var insert = conn.prepareStatement("insert into message (author_id, text, pub_date, flagged)\n" +
                         "            values (?, ?, ?, 0)");
 
@@ -113,11 +112,12 @@ public class WebApplication {
                 conn.close();
 
                 // TODO: Still no flask flashes here
-            }
+
         }
 
         catch (Exception e) {
             e.printStackTrace();
+            response.redirect(Templates.PUBLIC_TIMELINE);
             return e.toString();
 
         }
