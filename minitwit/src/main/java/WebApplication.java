@@ -82,7 +82,7 @@ public class WebApplication {
 
     public static Route add_message = (Request request, Response response)  -> {
         Map<String, Object> model = new HashMap<>();
-
+//testing
         try {
             var db = new SQLite();
             var conn = db.getConnection();
