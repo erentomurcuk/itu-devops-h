@@ -1,7 +1,8 @@
 # How to contribute
 
 The repository is set up as a mono-repository with multiple projects spread out in different
-folders. The main branch represents what is currently considered the "working" stable code.
+folders. The main branch represents what is currently considered the "working" stable production
+code.
 
 Features will be developed in feature branches created from the dev branch and merged into the dev
 branch when done. At the end of the week or when considered appropriate the dev branch will be
