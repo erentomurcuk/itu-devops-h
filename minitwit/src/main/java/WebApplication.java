@@ -97,7 +97,7 @@ public class WebApplication {
                 // httpResponse.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorised"); // Do we need to use this?
                 response.status(401);
             }
-            
+
                 var insert = conn.prepareStatement("insert into message (author_id, text, pub_date, flagged)\n" +
                         "            values (?, ?, ?, 0)");
 
@@ -117,11 +117,11 @@ public class WebApplication {
 
         catch (Exception e) {
             e.printStackTrace();
-            response.redirect(Templates.PUBLIC_TIMELINE);
             return e.toString();
 
         }
 
+        response.redirect(Templates.PUBLIC_TIMELINE);
         return WebApplication.render(model, Templates.PUBLIC_TIMELINE);
     };
 
