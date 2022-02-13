@@ -96,9 +96,11 @@ public class WebApplication {
                 var insert = conn.prepareStatement("insert into message (author_id, text, pub_date, flagged)\n" +
                         "            values (?, ?, ?, 0)");
 
+                long unixTime = System.currentTimeMillis() / 1000L;
+
                 insert.setString(1, request.session().attribute("author_id"));
                 insert.setString(2, request.queryParams("text"));
-                insert.setString(3, request.queryParams("pub_date"));
+                insert.setLong(3, unixTime);
 
                 insert.execute();
 
