@@ -18,11 +18,13 @@ import java.util.Map;
 public class WebApplication {
     public static class Templates {
         public static final String PUBLIC_TIMELINE = "/templates/timeline.vm";
+        public static final String LOGIN_SCREEN = "/templates/login.vm";
     }
     public static class URLS {
         public static final String PUBLIC_TIMELINE = "/public";
         public static final String USER_TIMELINE = "/<username>"; // TODO
         public static final String USER = "/";
+        public static final String LOGIN_PAGE = "/login";
     }
 
     public static void main(String[] args) {
@@ -75,7 +77,27 @@ public class WebApplication {
         model.put("splash", URLS.PUBLIC_TIMELINE);
         // Where does this come from in python?
         model.put("title", "Public timeline");
+        model.put("login", URLS.LOGIN_PAGE);
 
         return WebApplication.render(model, WebApplication.Templates.PUBLIC_TIMELINE);
     };
+
+    public static Route serveLoginPage = (Request request, Response response) -> {
+        var db = new SQLite();
+        var connection = db.getConnection();
+        var insert = connection.prepareCall("select * from user where\n" +
+                "            username = ?");
+        Map<String, Object> model = new HashMap<>();
+        //model.put("messages", new ArrayList<>());
+        return render(model, Templates.LOGIN_SCREEN);
+    };
+
+    public static Route handleLoginPost = (Request request, Response response) -> {
+        return render(new HashMap<>(), Templates.PUBLIC_TIMELINE);
+    };
+
+    /*public static Route handleLoginPost = (Request request, Response response) -> {
+        Map<String,Object> model = new HashMap<>();
+        model.put("u
+    }/**/
 }
