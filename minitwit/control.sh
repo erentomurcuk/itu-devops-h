@@ -49,6 +49,10 @@ then
 elif [ "$1" = "build-in-docker" ]
 then
     build-in-docker
+elif [ "$1" = "inspectdb" ]; then
+    ./flag_tool -i | less
+elif [ "$1" = "flag" ]; then
+    ./flag_tool "$@"
 else
     cat << EOF
 control.sh <command>
@@ -62,5 +66,7 @@ build:              Build and package jar file.
 build-with-docker:  Build and package jar file in a docker container, and copy jar
                     file into this directory. Useful for building without having
                     a JDK and Maven installation.
+inspectdb:          Shows the contents of the database in the terminal.
+flag:               Flags a specific tweet which hides it from view.
 EOF
 fi
