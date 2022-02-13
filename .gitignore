@@ -1,4 +1,5 @@
 
+.idea/
 .idea/compiler.xml
 .idea/jarRepositories.xml
 .idea/libraries/Maven__com_sparkjava_spark_core_2_9_3.xml
