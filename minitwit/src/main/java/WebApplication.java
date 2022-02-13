@@ -21,14 +21,14 @@ import java.util.Map;
 public class WebApplication {
     public static class Templates {
         public static final String PUBLIC_TIMELINE = "/templates/timeline.vm";
-        public static final String LOGIN_SCREEN = "/templates/login.vm";
+        public static final String LOGIN = "/templates/login.vm";
         public static final String REGISTER = "/templates/register.vm";
     }
     public static class URLS {
         public static final String PUBLIC_TIMELINE = "/public";
         public static final String USER_TIMELINE = "/<username>"; // TODO
         public static final String USER = "/";
-        public static final String LOGIN_PAGE = "/login";
+        public static final String LOGIN = "/login";
         public static final String REGISTER = "/register";
     }
 
@@ -41,7 +41,10 @@ public class WebApplication {
         get("/hello", (req, res) -> "Hello");
         get(URLS.PUBLIC_TIMELINE, WebApplication.servePublicTimelinePage);
         get(URLS.REGISTER, WebApplication.serveRegisterPage);
+        get(URLS.LOGIN, WebApplication.serveLoginPage);
+
         post(URLS.REGISTER, WebApplication.serveRegisterPage);
+        post(URLS.LOGIN, WebApplication.serveLoginPage);
     }
 
     public static int getUserID(SQLite db, String username) throws SQLException {
@@ -99,7 +102,7 @@ public class WebApplication {
         model.put("splash", URLS.PUBLIC_TIMELINE);
         // Where does this come from in python?
         model.put("title", "Public timeline");
-        model.put("login", URLS.LOGIN_PAGE);
+        model.put("login", URLS.LOGIN);
 
         return WebApplication.render(model, WebApplication.Templates.PUBLIC_TIMELINE);
     };
@@ -155,7 +158,7 @@ public class WebApplication {
 
                     // TODO: splash "You were successfully registered and can login now"
 
-                    response.redirect(/*URLS.LOGIN*/ "/login"); // TODO: use constant
+                    response.redirect(URLS.LOGIN); // TODO: use constant
                 }
             }
         } catch (Exception e) {
@@ -169,19 +172,41 @@ public class WebApplication {
     public static Route serveLoginPage = (Request request, Response response) -> {
         var db = new SQLite();
         var connection = db.getConnection();
-        var insert = connection.prepareCall("select * from user where\n" +
+        var lookup = connection.prepareStatement("select * from user where\n" +
                 "            username = ?");
         Map<String, Object> model = new HashMap<>();
+
+        var enteredUserName = request.queryParams("username");
+        var enteredPW = request.queryParams("password");
+
+        if (request.requestMethod().equals("POST")) {
+            if (enteredUserName==null || enteredUserName.equals("")) {
+                model.put("error", "Invalid username");
+            }
+            else{
+                lookup.setString(1, enteredUserName);
+                ResultSet rs = lookup.executeQuery();
+                var username = rs.getString("username");
+                var passwordHash = rs.getString("pw_hash");/**/
+
+                if (enteredPW == null || enteredPW.equals("") ) {
+                    model.put("error", "Invalid Password");
+                }
+                else {
+                    var matchPW = BCrypt.checkpw(enteredPW, passwordHash);
+                    if(matchPW) {
+                        model.put("user", username);
+
+                        response.redirect(URLS.PUBLIC_TIMELINE);
+                    }
+                    else {
+                        model.put("error", "Invalid password");
+                    }
+                }
+            }
+        }
         //model.put("messages", new ArrayList<>());
-        return render(model, Templates.LOGIN_SCREEN);
+        return render(model, Templates.LOGIN);
     };
 
-    public static Route handleLoginPost = (Request request, Response response) -> {
-        return render(new HashMap<>(), Templates.PUBLIC_TIMELINE);
-    };
-
-    /*public static Route handleLoginPost = (Request request, Response response) -> {
-        Map<String,Object> model = new HashMap<>();
-        model.put("u
-    }/**/
 }
