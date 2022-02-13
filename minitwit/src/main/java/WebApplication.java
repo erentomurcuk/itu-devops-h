@@ -2,6 +2,7 @@ import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.VelocityEngine;
 import org.apache.velocity.runtime.RuntimeConstants;
 import org.apache.velocity.runtime.resource.loader.ClasspathResourceLoader;
+import org.springframework.security.crypto.bcrypt.BCrypt;
 import spark.*;
 import static spark.Spark.*;
 import org.apache.velocity.Template;
@@ -11,6 +12,8 @@ import java.io.StringWriter;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -19,12 +22,14 @@ public class WebApplication {
     public static class Templates {
         public static final String PUBLIC_TIMELINE = "/templates/timeline.vm";
         public static final String LOGIN_SCREEN = "/templates/login.vm";
+        public static final String REGISTER = "/templates/register.vm";
     }
     public static class URLS {
         public static final String PUBLIC_TIMELINE = "/public";
         public static final String USER_TIMELINE = "/<username>"; // TODO
         public static final String USER = "/";
         public static final String LOGIN_PAGE = "/login";
+        public static final String REGISTER = "/register";
     }
 
     public static void main(String[] args) {
@@ -35,6 +40,23 @@ public class WebApplication {
         staticFiles.location("/static");
         get("/hello", (req, res) -> "Hello");
         get(URLS.PUBLIC_TIMELINE, WebApplication.servePublicTimelinePage);
+        get(URLS.REGISTER, WebApplication.serveRegisterPage);
+        post(URLS.REGISTER, WebApplication.serveRegisterPage);
+    }
+
+    public static int getUserID(SQLite db, String username) throws SQLException {
+        var conn = db.getConnection();
+        var statement = conn.prepareStatement("select user_id from user where username = ?");
+
+        statement.setString(1, username);
+        ResultSet rs = statement.executeQuery();
+
+        // No user with that username found
+        if (rs.isClosed()) {
+            return 0;
+        }
+
+        return rs.getInt("user_id");
     }
 
     public static String render(Map<String, Object> model, String templatePath) {
@@ -80,6 +102,68 @@ public class WebApplication {
         model.put("login", URLS.LOGIN_PAGE);
 
         return WebApplication.render(model, WebApplication.Templates.PUBLIC_TIMELINE);
+    };
+
+    public static Route serveRegisterPage = (Request request, Response response) -> {
+        Map<String, Object> model = new HashMap<>();
+        try {
+            var db = new SQLite();
+            var conn = db.getConnection();
+            var insert = conn.prepareStatement("insert into user (\n" +
+                    "                username, email, pw_hash) values (?, ?, ?)");
+
+
+            // TODO: Get logged in user (if any)
+            // if (userIsLoggedIn) {
+            //     response.redirect(URLS.LOGIN);
+            //     return;
+            // }
+
+            // TODO: Port flask "flashes"
+            model.put("messages", new ArrayList<String>() {});
+            //model.put("splash", URLS.PUBLIC_TIMELINE);
+            model.put("username", request.queryParams("username") == null ? "" : request.queryParams("username"));
+            model.put("email", request.queryParams("email") == null ? "" : request.queryParams("email"));
+
+            if (request.requestMethod().equals("POST")) {
+                if (request.queryParams("username") == null
+                        || request.queryParams("username").equals("")) {
+                    model.put("error", "You have to enter a username");
+                }
+                else if (request.queryParams("email") == null
+                        || request.queryParams("email").equals("")
+                        || !request.queryParams("email").contains("@")) {
+                    model.put("error", "You have to enter a valid email");
+                }
+                else if (request.queryParams("password") == null
+                        || request.queryParams("password2") == null) {
+                    model.put("error", "You have to enter a password");
+                }
+                else if (!request.queryParams("password").equals(request.queryParams("password2"))) {
+                    model.put("error", "YThe two passwords do not match");
+                }
+                else if (getUserID(db, request.queryParams("username")) != 0) {
+                    model.put("error", "The username is already taken");
+                }
+                else {
+                    String saltedPW = BCrypt.hashpw(request.queryParams("password"), BCrypt.gensalt());
+
+                    insert.setString(1, request.queryParams("username"));
+                    insert.setString(2, request.queryParams("email"));
+                    insert.setString(3, saltedPW);
+                    insert.execute();
+
+                    // TODO: splash "You were successfully registered and can login now"
+
+                    response.redirect(/*URLS.LOGIN*/ "/login"); // TODO: use constant
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return e.toString();
+        }
+
+        return WebApplication.render(model, WebApplication.Templates.REGISTER);
     };
 
     public static Route serveLoginPage = (Request request, Response response) -> {
