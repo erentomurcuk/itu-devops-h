@@ -87,8 +87,7 @@ public class WebApplication {
             var db = new SQLite();
             var conn = db.getConnection();
 
-
-            if (request.queryParams("user_id")) { // Python: # if 'user_id' not in session: #
+            if (request.session().attribute(request.queryParams("user_id")) == null) { // Python: # if 'user_id' not in session: #
                 // httpResponse.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorised"); // Do we need to use this?
                 halt(401);
             }
@@ -102,6 +101,8 @@ public class WebApplication {
                 insert.setString(3, request.queryParams("pub_date"));
 
                 insert.execute();
+
+                conn.close();
 
                 // TODO: Still no flask flashes here
             }
