@@ -40,11 +40,12 @@
     #foreach( $message in $messages )
       <li><img src="{{ message.email|gravatar(size=48) }}"><p>
         <strong><a href="{{ url_for('user_timeline', username=message.username)
-        }}">{{ message.username }}</a></strong>
-        {{ message.text }}
-        <small>&mdash; {{ message.pub_date|datetimeformat }}</small>
+        }}">${message.username}</a></strong>
+        $message.text
+        <small>&mdash; ${message.pub_date} |datetimeformat</small>
+      </p></li>
     #else
-      <li><em>There's no message so far.</em>
+      <li><em>There's no message so far.</em></li>
     #end
     </ul>
   ##{% endblock %}
