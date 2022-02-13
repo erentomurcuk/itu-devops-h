@@ -28,6 +28,7 @@ public class WebApplication {
         public static final String USER_TIMELINE = "/<username>"; // TODO
         public static final String USER = "/";
         public static final String REGISTER = "/register";
+        public static final String ADD_MESSAGE = ":add_message";
     }
 
     public static void main(String[] args) {
@@ -40,6 +41,7 @@ public class WebApplication {
         get(URLS.PUBLIC_TIMELINE, WebApplication.servePublicTimelinePage);
         get(URLS.REGISTER, WebApplication.serveRegisterPage);
         post(URLS.REGISTER, WebApplication.serveRegisterPage);
+        post(URLS.ADD_MESSAGE, WebApplication.add_message);
     }
 
     public static int getUserID(SQLite db, String username) throws SQLException {
@@ -117,6 +119,7 @@ public class WebApplication {
         catch (Exception e) {
             e.printStackTrace();
             return e.toString();
+
         }
 
         return WebApplication.render(model, Templates.PUBLIC_TIMELINE);
