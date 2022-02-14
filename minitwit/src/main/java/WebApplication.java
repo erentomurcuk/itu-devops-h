@@ -131,7 +131,8 @@ public class WebApplication {
         }
 
         response.redirect(Templates.PUBLIC_TIMELINE);
-        return WebApplication.render(model, Templates.PUBLIC_TIMELINE);
+        //return WebApplication.render(model, Templates.PUBLIC_TIMELINE);
+        return null;
     };
 
     public static Route serveFollowPage = (Request request, Response response) -> {
