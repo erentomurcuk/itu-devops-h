@@ -48,7 +48,7 @@ public class WebApplication {
         get(URLS.PUBLIC_TIMELINE, WebApplication.servePublicTimelinePage);
         get(URLS.REGISTER, WebApplication.serveRegisterPage);
         get(URLS.LOGIN, WebApplication.serveLoginPage);
-        post(URLS.LOGOUT, WebApplication.handleLogoutRequest);
+        get(URLS.LOGOUT, WebApplication.handleLogoutRequest);
 
         post(URLS.REGISTER, WebApplication.serveRegisterPage);
         post(URLS.ADD_MESSAGE, WebApplication.add_message);
@@ -99,8 +99,18 @@ public class WebApplication {
 
             // Set up variables available in templates
             VelocityContext ctx = new VelocityContext(model);
-            ctx.put("urls", WebApplication.URLS.class);
-            model.forEach((k, v) -> ctx.put(k, v));
+            ctx.put("urls", WebApplication.URLS.class);     //I think this is redundant no?
+            //This is the easiest way I could insert constants into the context. Maybe not elegant, but it works.
+            ctx.put("USER", URLS.USER);
+            ctx.put("LOGIN", URLS.LOGIN);
+            ctx.put("LOGOUT", URLS.LOGOUT);
+            ctx.put("PUBLIC_TIMELINE", URLS.PUBLIC_TIMELINE);
+            ctx.put("USER_TIMELINE", URLS.USER_TIMELINE);
+            ctx.put("REGISTER",URLS.REGISTER);
+            ctx.put("ADD_MESSAGE", URLS.ADD_MESSAGE);
+            ctx.put("FOLLOW",URLS.FOLLOW);
+            ctx.put("UNFOLLOW", URLS.UNFOLLOW);
+            model.forEach((k, v) -> ctx.put(k, v));         //I think this might also be redundant
 
             // "Run" template and return result
             StringWriter writer = new StringWriter();
@@ -436,11 +446,7 @@ public class WebApplication {
 
     public static Route handleLogoutRequest = (Request request, Response response) -> {
         Map<String, Object> model = new HashMap<>();
-
-        System.out.println("Logout 1 : " + (Integer) request.session().attribute("user_id"));
         request.session().removeAttribute("user_id");
-
-        System.out.println("Logout 2 : " + (Integer) request.session().attribute("user_id")); // DEBUG
         response.redirect(URLS.PUBLIC_TIMELINE);
         return null;
     };

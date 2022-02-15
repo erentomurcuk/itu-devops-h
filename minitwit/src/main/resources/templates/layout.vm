@@ -6,13 +6,13 @@
   <h1>MiniTwit</h1>
   <div class=navigation>
   #if ($user)
-    <a href="${urls.TIMELINE}">my timeline</a> |
-    <a href="${urls.PUBLIC_TIMELINE}">public timeline</a> |
-    <a href="${urls.LOGOUT}">sign out [$user]</a>
+    <a href=${USER_TIMELINE}>my timeline</a> |
+    <a href=${PUBLIC_TIMELINE}>public timeline</a> |
+    <a href=${LOGOUT}>sign out [$user]</a>
   #else
-    <a href="${urls.PUBLIC_TIMELINE}">public timeline</a> |
-    <a href="${urls.REGISTER}">sign up</a> |
-    <a href="${urls.LOGIN}">sign in</a>
+    <a href=${PUBLIC_TIMELINE}>public timeline</a> |
+    <a href=${REGISTER}>sign up</a> |
+    <a href=${LOGIN}>sign in</a>
   #end
   </div>
   #if ($splash.size() != 0)
