@@ -47,7 +47,7 @@ public class WebApplication {
         get(URLS.PUBLIC_TIMELINE, WebApplication.servePublicTimelinePage);
         get(URLS.REGISTER, WebApplication.serveRegisterPage);
         get(URLS.LOGIN, WebApplication.serveLoginPage);
-        post(URLS.LOGOUT, handleLogoutRequest);
+        post(URLS.LOGOUT, WebApplication.handleLogoutRequest);
 
         post(URLS.REGISTER, WebApplication.serveRegisterPage);
         post(URLS.FOLLOW, WebApplication.serveFollowPage);
@@ -194,8 +194,12 @@ public class WebApplication {
 
     public static Route serveUserTimelinePage = (Request request, Response response) -> {
         Map<String, Object> model = new HashMap<>();
-        // TODO: Get logged in user (if any)
-        if (false) {
+
+        var userID = (Integer) request.session().attribute("user_id");
+        var loggedInUser = getUser(new SQLite(), (userID));
+        if (loggedInUser != null) model.put("user", loggedInUser.getString("username"));
+
+        else if (loggedInUser == null) {
             response.redirect(URLS.PUBLIC_TIMELINE);
         }
         // TODO: Port flask "flashes"
@@ -372,13 +376,11 @@ public class WebApplication {
                     "            username = ?");
             lookup.setString(1, enteredUserName);
             ResultSet rs = lookup.executeQuery();
-            var username = rs.getString("username");
-            var passwordHash = rs.getString("pw_hash");
 
-            if (rs.wasNull()) {
+            if (rs.isClosed()) {
                 model.put("error", "Invalid username");
             }
-            else if (!BCrypt.checkpw(enteredPW, passwordHash)) {
+            else if (!BCrypt.checkpw(enteredPW, rs.getString("pw_hash"))) {
                 model.put("error", "Invalid Password");
             }
             else {
