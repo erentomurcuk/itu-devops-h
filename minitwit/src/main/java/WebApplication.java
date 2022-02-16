@@ -130,7 +130,7 @@ public class WebApplication {
 
         }
 
-        response.redirect(Templates.PUBLIC_TIMELINE);
+        response.redirect(request.queryParams("user_id"), 303);
         //return WebApplication.render(model, Templates.PUBLIC_TIMELINE);
         return null;
     };
