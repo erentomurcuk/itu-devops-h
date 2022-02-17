@@ -15,6 +15,7 @@ import java.nio.file.Path;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -82,6 +83,8 @@ public class WebApplication {
             VelocityContext ctx = new VelocityContext(model);
             ctx.put("urls", WebApplication.URLS.class);
             model.forEach((k, v) -> ctx.put(k, v));
+
+            ctx.put("date", new Date());
 
             // "Run" template and return result
             StringWriter writer = new StringWriter();
@@ -196,7 +199,7 @@ public class WebApplication {
                 result.put("message_id", messageRs.getInt("message_id"));
                 result.put("author_id", messageRs.getInt("author_id"));
                 result.put("text", messageRs.getString("text"));
-                result.put("pub_date", messageRs.getString("pub_date")); // Type?
+                result.put("pub_date", messageRs.getInt("pub_date"));
                 result.put("flagged", messageRs.getInt("flagged"));
                 result.put("username", messageRs.getString("username"));
                 result.put("email", messageRs.getString("email"));
