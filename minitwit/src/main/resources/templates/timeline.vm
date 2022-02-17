@@ -38,7 +38,7 @@
     #end
     <ul class=messages>
     #foreach( $message in $messages )
-      <li><img src="{{ message.email|gravatar(size=48) }}"><p>
+      <li><img src="$webapp.getGravatarURL(${message.email})"><p>
         <strong><a href="{{ url_for('user_timeline', username=message.username)
         }}">${message.username}</a></strong>
         $message.text
