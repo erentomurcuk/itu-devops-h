@@ -44,8 +44,7 @@
         $message.text
         <small>
           &mdash;
-          $date.setTime(${message.pub_date} * 1000)
-          ${date}
+          $date.format('y-MM-dd @ H:mm', ${message.pub_date} * 1000)
         </small>
       </p></li>
     #else

@@ -2,6 +2,7 @@ import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.VelocityEngine;
 import org.apache.velocity.runtime.RuntimeConstants;
 import org.apache.velocity.runtime.resource.loader.ClasspathResourceLoader;
+import org.apache.velocity.tools.generic.DateTool;
 import org.springframework.security.crypto.bcrypt.BCrypt;
 import spark.*;
 import static spark.Spark.*;
@@ -84,7 +85,7 @@ public class WebApplication {
             ctx.put("urls", WebApplication.URLS.class);
             model.forEach((k, v) -> ctx.put(k, v));
 
-            ctx.put("date", new Date());
+            ctx.put("date", new DateTool());
 
             // "Run" template and return result
             StringWriter writer = new StringWriter();
