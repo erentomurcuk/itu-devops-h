@@ -23,12 +23,15 @@ import java.util.Map;
 public class WebApplication {
     public static class Templates {
         public static final String PUBLIC_TIMELINE = "/templates/timeline.vm";
+        public static final String LOGIN = "/templates/login.vm";
         public static final String REGISTER = "/templates/register.vm";
     }
     public static class URLS {
         public static final String PUBLIC_TIMELINE = "/public";
         public static final String USER_TIMELINE = "/:username";
         public static final String USER = "/";
+        public static final String LOGIN = "/login";
+        public static final String LOGOUT = "/logout";
         public static final String REGISTER = "/register";
         public static final String ADD_MESSAGE = "/add_message";
         public static final String FOLLOW = "/:username/follow";
@@ -46,12 +49,28 @@ public class WebApplication {
         get("/hello", (req, res) -> "Hello");
         get(URLS.PUBLIC_TIMELINE, WebApplication.servePublicTimelinePage);
         get(URLS.REGISTER, WebApplication.serveRegisterPage);
+        get(URLS.LOGIN, WebApplication.serveLoginPage);
+        get(URLS.LOGOUT, WebApplication.handleLogoutRequest);
+
         post(URLS.REGISTER, WebApplication.serveRegisterPage);
         post(URLS.ADD_MESSAGE, WebApplication.add_message);
         post(URLS.FOLLOW, WebApplication.serveFollowPage);
         post(URLS.UNFOLLOW, WebApplication.serveUnfollowPage);
         get(URLS.USER, WebApplication.serveUserTimelinePage);
         get(URLS.USER_TIMELINE, WebApplication.serveUserByUsernameTimelinePage);
+        post(URLS.LOGIN, WebApplication.serveLoginPage);
+    }
+
+    public static ResultSet getUser(SQLite db, Integer userId) throws SQLException {
+        if (userId == null) return null;
+
+        var conn = db.getConnection();
+        var statement = conn.prepareStatement("select * from user where user_id = ?");
+
+        statement.setInt(1, userId);
+        ResultSet rs = statement.executeQuery();
+
+        return rs;
     }
 
     public static int getUserID(SQLite db, String username) throws SQLException {
@@ -65,7 +84,7 @@ public class WebApplication {
         if (rs.isClosed()) {
             return 0;
         }
-        
+
         return rs.getInt("user_id");
     }
 
@@ -82,8 +101,18 @@ public class WebApplication {
 
             // Set up variables available in templates
             VelocityContext ctx = new VelocityContext(model);
-            ctx.put("urls", WebApplication.URLS.class);
-            model.forEach((k, v) -> ctx.put(k, v));
+            ctx.put("urls", WebApplication.URLS.class);     //I think this is redundant no?
+            //This is the easiest way I could insert constants into the context. Maybe not elegant, but it works.
+            ctx.put("USER", URLS.USER);
+            ctx.put("LOGIN", URLS.LOGIN);
+            ctx.put("LOGOUT", URLS.LOGOUT);
+            ctx.put("PUBLIC_TIMELINE", URLS.PUBLIC_TIMELINE);
+            ctx.put("USER_TIMELINE", URLS.USER_TIMELINE);
+            ctx.put("REGISTER",URLS.REGISTER);
+            ctx.put("ADD_MESSAGE", URLS.ADD_MESSAGE);
+            ctx.put("FOLLOW",URLS.FOLLOW);
+            ctx.put("UNFOLLOW", URLS.UNFOLLOW);
+            model.forEach((k, v) -> ctx.put(k, v));         //I think this might also be redundant
 
             ctx.put("date", new DateTool());
 
@@ -134,8 +163,9 @@ public class WebApplication {
 
         }
 
-        response.redirect(Templates.PUBLIC_TIMELINE);
-        return WebApplication.render(model, Templates.PUBLIC_TIMELINE);
+        response.redirect(request.queryParams("user_id"), 303);
+        //return WebApplication.render(model, Templates.PUBLIC_TIMELINE);
+        return null;
     };
 
     public static Route serveFollowPage = (Request request, Response response) -> {
@@ -178,12 +208,15 @@ public class WebApplication {
     public static Route servePublicTimelinePage = (Request request, Response response) -> {
         try {
             Map<String, Object> model = new HashMap<>();
-            // TODO: Get logged in user (if any)
-            // model.put("user", loggedInUser);
+
+            var userID = (Integer) request.session().attribute("user_id");
+            var loggedInUser = getUser(new SQLite(), (userID));
+            if (loggedInUser != null) model.put("user", loggedInUser.getString("username"));
             // TODO: Port flask "flashes"
             model.put("splash", URLS.PUBLIC_TIMELINE);
             // Where does this come from in python?
             model.put("title", "Public timeline");
+            model.put("login", URLS.LOGIN);
 
             var db = new SQLite();
             var conn = db.getConnection();
@@ -217,8 +250,12 @@ public class WebApplication {
 
     public static Route serveUserTimelinePage = (Request request, Response response) -> {
         Map<String, Object> model = new HashMap<>();
-        // TODO: Get logged in user (if any)
-        if (false) {
+
+        var userID = (Integer) request.session().attribute("user_id");
+        var loggedInUser = getUser(new SQLite(), (userID));
+        if (loggedInUser != null) model.put("user", loggedInUser.getString("username"));
+
+        else if (loggedInUser == null) {
             response.redirect(URLS.PUBLIC_TIMELINE);
         }
         // TODO: Port flask "flashes"
@@ -368,7 +405,7 @@ public class WebApplication {
 
                     // TODO: splash "You were successfully registered and can login now"
 
-                    response.redirect(/*URLS.LOGIN*/ "/login"); // TODO: use constant
+                    response.redirect(URLS.LOGIN);
                 }
             }
         } catch (Exception e) {
@@ -377,5 +414,45 @@ public class WebApplication {
         }
 
         return WebApplication.render(model, WebApplication.Templates.REGISTER);
+    };
+
+    public static Route serveLoginPage = (Request request, Response response) -> {
+        if(request.session().attribute("user_id") != null) {
+            response.redirect(URLS.USER);
+        }
+        Map<String, Object> model = new HashMap<>();
+
+        var enteredUserName = request.queryParams("username");
+        var enteredPW = request.queryParams("password");
+
+        if (request.requestMethod().equals("POST")) {
+            var db = new SQLite();
+            var connection = db.getConnection();
+            var lookup = connection.prepareStatement("select * from user where\n" +
+                    "            username = ?");
+            lookup.setString(1, enteredUserName);
+            ResultSet rs = lookup.executeQuery();
+
+            if (rs.isClosed()) {
+                model.put("error", "Invalid username");
+            }
+            else if (!BCrypt.checkpw(enteredPW, rs.getString("pw_hash"))) {
+                model.put("error", "Invalid Password");
+            }
+            else {
+                var userID = rs.getInt("user_id");
+
+                request.session().attribute("user_id", userID);
+                response.redirect(URLS.USER);
+            }
+        }
+        return render(model, Templates.LOGIN);
+    };
+
+    public static Route handleLogoutRequest = (Request request, Response response) -> {
+        Map<String, Object> model = new HashMap<>();
+        request.session().removeAttribute("user_id");
+        response.redirect(URLS.PUBLIC_TIMELINE);
+        return null;
     };
 }
