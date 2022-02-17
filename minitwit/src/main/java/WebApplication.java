@@ -39,6 +39,34 @@ public class WebApplication {
         public static final String ADD_MESSAGE = "/add_message";
         public static final String FOLLOW = "/:username/follow";
         public static final String UNFOLLOW = "/:username/unfollow";
+
+        /**
+         * Transforms a url with :parameters using a map with keys and values
+         * @param url to use
+         * @param values map of parameters and their values, must be String or Integer values
+         * @return url with parameters replaces with values
+         * @throws Exception
+         */
+        public static String urlFor(String url, Map<String, Object> values) throws Exception {
+            String u = url;
+            for (String key: values.keySet()) {
+                System.out.println(u + " : " + key + " : " + values.get(key));
+                if (values.get(key) instanceof String) {
+                    u = u.replace(":" + key, (String) values.get(key));
+                } else if (values.get(key) instanceof Integer) {
+                    u = u.replace(":" + key, String.valueOf(values.get(key)));
+                } else {
+                    System.out.println("Cant convert value, lets see what happens now... " + key + " : " + values.get(key));
+                    u = u.replace(":" + key, "" + values.get(key));
+                }
+            }
+
+            return u;
+        }
+
+        public static String urlFor(String url) throws Exception {
+            return urlFor(url, new HashMap<String, Object>());
+        }
     }
 
     public static int PER_PAGE = 30;
@@ -276,6 +304,7 @@ public class WebApplication {
         model.put("splash", URLS.USER);
         // Where does this come from in python?
         model.put("title", "Public timeline");
+        model.put("endpoint", URLS.USER);
 
         var db = new SQLite();
         var conn = db.getConnection();
