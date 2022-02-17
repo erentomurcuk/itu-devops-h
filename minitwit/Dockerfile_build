@@ -1,6 +1,4 @@
 FROM maven:3.8.4-openjdk-17-slim
-VOLUME [ "/out" ]
-COPY . /usr/src/minitwit
-WORKDIR /usr/src/minitwit
-RUN ./control.sh build
-ENTRYPOINT [ "cp", "/usr/src/minitwit/minitwit.jar", "/out/minitwit.jar" ]
+VOLUME [ "/out", "/src" ]
+WORKDIR /src
+ENTRYPOINT [ "./control.sh", "build" ]

@@ -21,11 +21,11 @@ function build {
 
 function build-in-docker {
     images=$( sudo docker images | grep minitwit-builder )
-    if [ -z $images ]
+    if [ -z "$images" ]
     then
         docker build --tag minitwit-builder -f ./Dockerfile_build .
     fi
-    docker run --volume /tmp/minitwit:/out minitwit-builder
+    docker run --volume "$PWD":/src --volume /tmp/minitwit:/out minitwit-builder
     cp /tmp/minitwit/minitwit.jar ./
 }
 
