@@ -1,6 +1,6 @@
 #macro(mainLayout)
 <!doctype html>
-<title>{% block title %}Welcome{% endblock %} | MiniTwit</title>
+<title>${title} | MiniTwit</title>
 <link rel=stylesheet type=text/css href="/style.css">
 <div class=page>
   <h1>MiniTwit</h1>
