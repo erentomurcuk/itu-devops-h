@@ -1,3 +1,6 @@
+import com.timgroup.jgravatar.Gravatar;
+import com.timgroup.jgravatar.GravatarDefaultImage;
+import com.timgroup.jgravatar.GravatarRating;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.VelocityEngine;
 import org.apache.velocity.runtime.RuntimeConstants;
@@ -37,6 +40,11 @@ public class WebApplication {
     }
 
     public static int PER_PAGE = 30;
+
+    private static final Gravatar gravatar = new Gravatar()
+            .setSize(48)
+            .setRating(GravatarRating.GENERAL_AUDIENCES)
+            .setDefaultImage(GravatarDefaultImage.IDENTICON);
 
     public static void main(String[] args) {
         System.out.println("Hello Minitwit");
@@ -99,6 +107,7 @@ public class WebApplication {
 
             // Set up variables available in templates
             VelocityContext ctx = new VelocityContext(model);
+            ctx.put("webapp", WebApplication.class);
             ctx.put("urls", WebApplication.URLS.class);     //I think this is redundant no?
             //This is the easiest way I could insert constants into the context. Maybe not elegant, but it works.
             ctx.put("USER", URLS.USER);
@@ -123,6 +132,10 @@ public class WebApplication {
         }
     }
 
+    // Used by timeline.vm to display user's gravatar
+    public static String getGravatarURL(String email) {
+        return gravatar.getUrl(email);
+    }
 
     public static Route add_message = (Request request, Response response)  -> {
         Map<String, Object> model = new HashMap<>();
