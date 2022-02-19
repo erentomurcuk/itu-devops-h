@@ -230,7 +230,7 @@ public class WebApplication {
             var loggedInUser = getUser(new SQLite(), (userID));
             if (loggedInUser != null) model.put("user", loggedInUser.getString("username"));
             // TODO: Port flask "flashes"
-            model.put("splash", URLS.PUBLIC_TIMELINE);
+            model.put("splash", new ArrayList());
             // Where does this come from in python?
             model.put("title", "Public Timeline");
             model.put("login", URLS.LOGIN);
@@ -277,7 +277,7 @@ public class WebApplication {
         }
         // TODO: Port flask "flashes"
 
-        model.put("splash", URLS.USER);
+        model.put("splash", new ArrayList());
         model.put("title", loggedInUser.getString("username"));
 
         var db = new SQLite();
@@ -318,8 +318,7 @@ public class WebApplication {
             Map<String, Object> model = new HashMap<>();
 
             // TODO: Port flask "flashes"
-
-            model.put("splash", URLS.USER);
+            model.put("splash", new ArrayList());
 
             var db = new SQLite();
             var conn = db.getConnection();
