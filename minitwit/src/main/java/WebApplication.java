@@ -346,6 +346,10 @@ public class WebApplication {
         try {
             Map<String, Object> model = new HashMap<>();
 
+            var userID = (Integer) request.session().attribute("user_id");
+            var loggedInUser = getUser(new SQLite(), (userID));
+            if (loggedInUser != null) model.put("user", loggedInUser.getString("username"));
+
             // TODO: Port flask "flashes"
             model.put("splash", new ArrayList());
 
