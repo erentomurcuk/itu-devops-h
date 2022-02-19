@@ -1,15 +1,5 @@
 #parse("/templates/layout.vm")
 #@mainLayout()
-  ##{% block title %}
-  #if ($endpoint.equals($urls.PUBLIC_TIMELINE))
-    Public Timeline
-  #elseif ($endpoint.equals($urls.USER_TIMELINE))
-    $profile_user.username's Timeline
-  #else
-    My Timeline
-  #end
-  ##{% endblock %}
-  ##{% block body %}
     <h2>$title</h2>
     #if ($user)
       #if ($endpoint.equals($urls.USER_TIMELINE))
@@ -49,5 +39,4 @@
       <li><em>There's no message so far.</em></li>
     #end
     </ul>
-  ##{% endblock %}
 #end

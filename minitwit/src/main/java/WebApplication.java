@@ -153,6 +153,10 @@ public class WebApplication {
 
             ctx.put("date", new DateTool());
 
+            if (!ctx.containsKey("title")) {
+                ctx.put("title", "Welcome");
+            }
+
             // "Run" template and return result
             StringWriter writer = new StringWriter();
             template.merge(ctx, writer);
@@ -254,9 +258,9 @@ public class WebApplication {
             var loggedInUser = getUser(new SQLite(), (userID));
             if (loggedInUser != null) model.put("user", loggedInUser.getString("username"));
             // TODO: Port flask "flashes"
-            model.put("splash", URLS.PUBLIC_TIMELINE);
+            model.put("splash", new ArrayList());
             // Where does this come from in python?
-            model.put("title", "Public timeline");
+            model.put("title", "Public Timeline");
             model.put("login", URLS.LOGIN);
 
             var db = new SQLite();
@@ -301,10 +305,9 @@ public class WebApplication {
         }
         // TODO: Port flask "flashes"
 
-        model.put("splash", URLS.USER);
-        // Where does this come from in python?
-        model.put("title", "Public timeline");
         model.put("endpoint", URLS.USER);
+        model.put("splash", new ArrayList());
+        model.put("title", loggedInUser.getString("username"));
 
         var db = new SQLite();
         var conn = db.getConnection();
@@ -344,10 +347,7 @@ public class WebApplication {
             Map<String, Object> model = new HashMap<>();
 
             // TODO: Port flask "flashes"
-
-            model.put("splash", URLS.USER);
-            // Where does this come from in python?
-            model.put("title", "Public timeline");
+            model.put("splash", new ArrayList());
 
             var db = new SQLite();
             var conn = db.getConnection();
@@ -367,6 +367,8 @@ public class WebApplication {
             profileUser.put("email", profileRs.getString("email"));
             model.put("profile_user", profileUser);
             profileRs.close();
+
+            model.put("title", profileUser.get("username"));
 
             var messageStmt = conn.prepareStatement(
                     "select message.*, user.* from message, user where\n" +
@@ -416,6 +418,7 @@ public class WebApplication {
             //model.put("splash", URLS.PUBLIC_TIMELINE);
             model.put("username", request.queryParams("username") == null ? "" : request.queryParams("username"));
             model.put("email", request.queryParams("email") == null ? "" : request.queryParams("email"));
+            model.put("title", "Sign Up");
 
             if (request.requestMethod().equals("POST")) {
                 if (request.queryParams("username") == null
@@ -463,6 +466,7 @@ public class WebApplication {
             response.redirect(URLS.USER);
         }
         Map<String, Object> model = new HashMap<>();
+        model.put("title", "Sign In");
 
         var enteredUserName = request.queryParams("username");
         var enteredPW = request.queryParams("password");
