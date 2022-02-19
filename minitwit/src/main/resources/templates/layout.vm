@@ -1,6 +1,6 @@
 #macro(mainLayout)
 <!doctype html>
-<title>{% block title %}Welcome{% endblock %} | MiniTwit</title>
+<title>${title} | MiniTwit</title>
 <link rel=stylesheet type=text/css href="/style.css">
 <div class=page>
   <h1>MiniTwit</h1>
@@ -15,7 +15,7 @@
     <a href=${LOGIN}>sign in</a>
   #end
   </div>
-  #if ($splash.size() != 0)
+  #if ($splash && $splash.size() != 0)
     <ul class=fs>
     #foreach( $message in $splash )
       <li>$message</li>

@@ -20,13 +20,43 @@ function build {
 }
 
 function build-in-docker {
+    # Check for existing minitwit-builder and delete if found
     images=$( sudo docker images | grep minitwit-builder )
-    if [ -z $images ]
+    if [ -n "$images" ]
     then
-        docker build --tag minitwit-builder -f ./Dockerfile_build .
+        echo "Old minitwit-builder already exists, attempting to delete it..."
+        docker rmi minitwit-builder -f 
     fi
-    docker run --volume /tmp/minitwit:/out minitwit-builder
+
+    # Build java project and store it in the image
+    docker build --tag minitwit-builder -f ./Dockerfile_build .
+    success=$?
+
+    # Notify user if something fails, return exit code
+    if [ $success != 0 ] ;
+    then
+        echo ""
+        echo "Done with build errors"
+        exit $success
+    fi
+
+    # Run only copies final jar file to container /out directory
+    docker run --rm --volume /tmp/minitwit:/out minitwit-builder
+    success=$?
     cp /tmp/minitwit/minitwit.jar ./
+
+    # Clean up
+    docker rmi minitwit-builder -f
+
+    # Echo final status message
+    echo ""
+    if [ $success ]
+    then
+        echo "Done!"
+    else
+        echo "Done with during java build errors"
+        exit $success
+    fi
 }
 
 if [ "$1" = "init-and-start" ]
