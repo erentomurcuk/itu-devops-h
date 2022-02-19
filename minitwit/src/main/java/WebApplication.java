@@ -232,7 +232,7 @@ public class WebApplication {
             // TODO: Port flask "flashes"
             model.put("splash", URLS.PUBLIC_TIMELINE);
             // Where does this come from in python?
-            model.put("title", "Public timeline");
+            model.put("title", "Public Timeline");
             model.put("login", URLS.LOGIN);
 
             var db = new SQLite();
@@ -438,7 +438,7 @@ public class WebApplication {
             response.redirect(URLS.USER);
         }
         Map<String, Object> model = new HashMap<>();
-        model.put("title", "Sign in");
+        model.put("title", "Sign In");
 
         var enteredUserName = request.queryParams("username");
         var enteredPW = request.queryParams("password");
