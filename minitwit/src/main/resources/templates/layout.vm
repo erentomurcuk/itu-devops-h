@@ -15,7 +15,7 @@
     <a href=${LOGIN}>sign in</a>
   #end
   </div>
-  #if ($splash.size() != 0)
+  #if ($splash && $splash.size() != 0)
     <ul class=fs>
     #foreach( $message in $splash )
       <li>$message</li>
