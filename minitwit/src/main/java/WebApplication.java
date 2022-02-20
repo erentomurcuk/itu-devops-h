@@ -11,6 +11,7 @@ import static spark.Spark.*;
 import org.apache.velocity.Template;
 
 import java.io.StringWriter;
+import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -104,10 +105,9 @@ public class WebApplication {
         });
     }
 
-    public static ResultSet getUser(SQLite db, Integer userId) throws SQLException {
+    public static ResultSet getUser(Connection conn, Integer userId) throws SQLException {
         if (userId == null) return null;
 
-        var conn = db.getConnection();
         var statement = conn.prepareStatement("select * from user where user_id = ?");
 
         statement.setInt(1, userId);
@@ -229,7 +229,7 @@ public class WebApplication {
 
                 insert.execute();
 
-                conn.close();
+            conn.close();
 
                 // TODO: Still no flask flashes here
 
@@ -287,8 +287,11 @@ public class WebApplication {
         try {
             Map<String, Object> model = new HashMap<>();
 
+            var db = new SQLite();
+            var conn = db.getConnection();
+
             var userID = (Integer) request.session().attribute("user_id");
-            var loggedInUser = getUser(new SQLite(), (userID));
+            var loggedInUser = getUser(conn, (userID));
             if (loggedInUser != null) model.put("user", loggedInUser.getString("username"));
             // TODO: Port flask "flashes"
             model.put("splash", new ArrayList());
@@ -308,9 +311,11 @@ public class WebApplication {
 
     public static Route serveUserTimelinePage = (Request request, Response response) -> {
         Map<String, Object> model = new HashMap<>();
+        var db = new SQLite();
+        var conn = db.getConnection();
 
         var userID = (Integer) request.session().attribute("user_id");
-        var loggedInUser = getUser(new SQLite(), (userID));
+        var loggedInUser = getUser(conn, (userID));
         if (loggedInUser != null) model.put("user", loggedInUser.getString("username"));
 
         else if (loggedInUser == null) {
@@ -322,8 +327,6 @@ public class WebApplication {
         model.put("splash", new ArrayList());
         model.put("title", loggedInUser.getString("username"));
 
-        var db = new SQLite();
-        var conn = db.getConnection();
         var statement = conn.prepareStatement(
                 "        select message.*, user.* from message, user\n" +
                         "        where message.flagged = 0 and message.author_id = user.user_id and (\n" +
@@ -352,6 +355,8 @@ public class WebApplication {
         }
         model.put("messages", results);
 
+        conn.close();
+
         return WebApplication.render(model, WebApplication.Templates.PUBLIC_TIMELINE);
     };
 
@@ -359,15 +364,16 @@ public class WebApplication {
         try {
             Map<String, Object> model = new HashMap<>();
 
+            var db = new SQLite();
+            var conn = db.getConnection();
+
             var userID = (Integer) request.session().attribute("user_id");
-            var loggedInUser = getUser(new SQLite(), (userID));
+            var loggedInUser = getUser(conn, (userID));
             if (loggedInUser != null) model.put("user", loggedInUser.getString("username"));
 
             // TODO: Port flask "flashes"
             model.put("splash", new ArrayList());
 
-            var db = new SQLite();
-            var conn = db.getConnection();
 
             var profileStmt = conn.prepareStatement(
                     "select * from user where username = ?"
@@ -376,6 +382,7 @@ public class WebApplication {
             var profileRs = profileStmt.executeQuery();
             if (profileRs.isClosed()) {
                 response.status(404);
+                conn.close();
                 return "404"; // TODO: What does the old one do?
             }
             var profileUser = new HashMap<String, Object>();
@@ -407,6 +414,8 @@ public class WebApplication {
                 messages.add(result);
             }
             model.put("messages", messages);
+
+            conn.close();
 
             return WebApplication.render(model, WebApplication.Templates.PUBLIC_TIMELINE);
         } catch (Exception e) {
@@ -470,6 +479,7 @@ public class WebApplication {
                     response.redirect(URLS.LOGIN);
                 }
             }
+            conn.close();
         } catch (Exception e) {
             e.printStackTrace();
             return e.toString();
@@ -508,6 +518,8 @@ public class WebApplication {
                 request.session().attribute("user_id", userID);
                 response.redirect(URLS.USER);
             }
+            rs.close();
+            connection.close();
         }
         return render(model, Templates.LOGIN);
     };
