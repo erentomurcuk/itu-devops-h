@@ -210,28 +210,29 @@ public class WebApplication {
         Map<String, Object> model = new HashMap<>();
 
         try {
+            if (request.session().attribute("user_id") == null) {
+                response.status(401);
+                return "Unauthorised";
+            }
+
             var db = new SQLite();
             var conn = db.getConnection();
 
-            if (request.session().attribute(request.queryParams("user_id")) == null) { // Python: # if 'user_id' not in session: #
-                // httpResponse.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorised"); // Do we need to use this?
-                response.status(401);
-            }
+            var insert = conn.prepareStatement(
+                "insert into message (author_id, text, pub_date, flagged)\n" +
+                    "            values (?, ?, ?, 0)");
 
-                var insert = conn.prepareStatement("insert into message (author_id, text, pub_date, flagged)\n" +
-                        "            values (?, ?, ?, 0)");
+            long unixTime = System.currentTimeMillis() / 1000L;
 
-                long unixTime = System.currentTimeMillis() / 1000L;
+            insert.setInt(1, request.session().attribute("user_id"));
+            insert.setString(2, request.queryParams("text"));
+            insert.setLong(3, unixTime);
 
-                insert.setString(1, request.session().attribute("author_id"));
-                insert.setString(2, request.queryParams("text"));
-                insert.setLong(3, unixTime);
-
-                insert.execute();
+            insert.execute();
 
             conn.close();
 
-                // TODO: Still no flask flashes here
+            // TODO: Still no flask flashes here
 
         }
 
@@ -241,9 +242,9 @@ public class WebApplication {
 
         }
 
-        response.redirect(request.queryParams("user_id"), 303);
+        response.redirect(URLS.USER, 303);
         //return WebApplication.render(model, Templates.PUBLIC_TIMELINE);
-        return null;
+        return "";
     };
 
     public static Route serveFollowPage = (Request request, Response response) -> {
