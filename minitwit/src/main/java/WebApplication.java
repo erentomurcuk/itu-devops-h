@@ -1,3 +1,4 @@
+import com.google.gson.annotations.SerializedName;
 import com.timgroup.jgravatar.Gravatar;
 import com.timgroup.jgravatar.GravatarDefaultImage;
 import com.timgroup.jgravatar.GravatarRating;
@@ -11,6 +12,7 @@ import spark.*;
 import static spark.Spark.*;
 import org.apache.velocity.Template;
 import spark.resource.ClassPathResource;
+import com.google.gson.Gson;
 
 import java.io.StringWriter;
 import java.net.URL;
@@ -18,10 +20,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 public class WebApplication {
     public static class Templates {
@@ -39,6 +38,8 @@ public class WebApplication {
         public static final String ADD_MESSAGE = "/add_message";
         public static final String FOLLOW = "/:username/follow";
         public static final String UNFOLLOW = "/:username/unfollow";
+
+        public static final String SIM_FLLWS = "/fllws/:username";
     }
 
     public static int PER_PAGE = 30;
@@ -67,6 +68,9 @@ public class WebApplication {
         get(URLS.USER, WebApplication.serveUserTimelinePage);
         get(URLS.USER_TIMELINE, WebApplication.serveUserByUsernameTimelinePage);
         post(URLS.LOGIN, WebApplication.serveLoginPage);
+
+        post(URLS.SIM_FLLWS, WebApplication.serveSimFllws);
+        get(URLS.SIM_FLLWS, WebApplication.serveSimFllws);
     }
 
     public static ResultSet getUser(SQLite db, Integer userId) throws SQLException {
@@ -217,6 +221,126 @@ public class WebApplication {
 
         return true;
     };
+
+    public static Route serveSimFllws = (Request request, Response response) -> {
+
+        System.out.println("Fllws called");
+
+        //update_latest(request); //TODO: implement
+
+
+        var db = new SQLite();
+        var conn = db.getConnection();
+
+        var whom_id = getUserID(db, request.params(":username"));
+
+        if (whom_id == 0) {
+            response.status(404);
+            //return false;
+        }
+
+        Gson gson = new Gson();
+        Fllws fllws = gson.fromJson(request.body(), Fllws.class);
+
+
+        if (Objects.equals(request.requestMethod(), "POST") && !fllws.follow.isEmpty()) {
+            System.out.println("post follow");
+
+            var who_id = getUserID(db, fllws.follow);
+
+            if (who_id == 0) {
+                response.status(404);
+                //return false;
+            }
+
+            System.out.println(who_id);
+
+            var insert = conn.prepareStatement("insert into follower (\n" +
+                    "                who_id, whom_id) values (?, ?)");
+
+            insert.setInt(1, who_id);
+            insert.setInt(2, whom_id);
+            insert.execute();
+
+            conn.close();
+
+            response.status(200);
+            return true;
+
+        }
+
+        if (Objects.equals(request.requestMethod(), "POST") && !fllws.unfollow.isEmpty()) {
+            System.out.println("post unfollow");
+
+            var who_id = getUserID(db, fllws.unfollow);
+
+            if (who_id == 0) {
+                response.status(404);
+                //return false;
+            }
+
+            var insert = conn.prepareStatement("delete from follower where who_id=? and whom_id=?");
+
+            insert.setInt(1, who_id);
+            insert.setInt(2, whom_id);
+            insert.execute();
+
+            conn.close();
+
+            response.status(200);
+            return true;
+        }
+
+        if (Objects.equals(request.requestMethod(), "GET")) {
+            System.out.println("Get");
+
+            var insert = conn.prepareStatement("SELECT user.username FROM user INNER JOIN follower ON follower.whom_id=? WHERE follower.who_id=? LIMIT ?");
+
+            insert.setInt(1, whom_id);
+            //insert.setInt(2, request.session().attribute(request.queryParams("user_id")));
+            insert.setInt(2, 999);
+            insert.setInt(3, 100);
+
+            var rs = insert.executeQuery();
+
+            conn.close();
+
+            System.out.println(rs.next());
+            System.out.println(rs.next());
+
+            response.status(200);
+            return true;
+        }
+
+
+
+        System.out.println(request.params());
+
+
+
+
+
+        conn.close();
+
+        return true;
+    };
+
+    private class Fllws {
+        @SerializedName("follow")
+        private String follow;
+
+        @SerializedName("unfollow")
+        private String unfollow;
+    }
+
+    private class Follows {
+        @SerializedName("follows")
+        private List[] follows;
+    }
+
+
+
+
 
     public static Route servePublicTimelinePage = (Request request, Response response) -> {
         try {
