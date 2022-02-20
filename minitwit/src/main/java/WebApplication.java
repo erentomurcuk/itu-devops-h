@@ -1,25 +1,19 @@
+import com.google.gson.Gson;
 import com.timgroup.jgravatar.Gravatar;
 import com.timgroup.jgravatar.GravatarDefaultImage;
 import com.timgroup.jgravatar.GravatarRating;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.VelocityEngine;
-import org.apache.velocity.runtime.RuntimeConstants;
-import org.apache.velocity.runtime.resource.loader.ClasspathResourceLoader;
 import org.apache.velocity.tools.generic.DateTool;
 import org.springframework.security.crypto.bcrypt.BCrypt;
 import spark.*;
 import static spark.Spark.*;
 import org.apache.velocity.Template;
-import spark.resource.ClassPathResource;
 
 import java.io.StringWriter;
-import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -67,9 +61,14 @@ public class WebApplication {
         public static String urlFor(String url) throws Exception {
             return urlFor(url, new HashMap<String, Object>());
         }
+
+        // Sim API
+        public static final String SIM_MESSAGES = "/msgs";
     }
 
     public static int PER_PAGE = 30;
+
+    public static Gson gson = new Gson();
 
     private static final Gravatar gravatar = new Gravatar()
             .setSize(48)
@@ -95,6 +94,14 @@ public class WebApplication {
         get(URLS.USER, WebApplication.serveUserTimelinePage);
         get(URLS.USER_TIMELINE, WebApplication.serveUserByUsernameTimelinePage);
         post(URLS.LOGIN, WebApplication.serveLoginPage);
+
+        // Sim API
+        path("/api", () -> {
+            // All endpoints in this path must be authenticated
+            before("/*", protectEndpoint);
+
+            get(URLS.SIM_MESSAGES, WebApplication.serveSimMsgs, gson::toJson);
+        });
     }
 
     public static ResultSet getUser(SQLite db, Integer userId) throws SQLException {
@@ -122,6 +129,32 @@ public class WebApplication {
         }
 
         return rs.getInt("user_id");
+    }
+
+    public static ArrayList<HashMap<String, Object>> getMessages() throws SQLException {
+        var db = new SQLite();
+        var conn = db.getConnection();
+
+        var messageStmt = conn.prepareStatement(
+                "select message.*, user.* from message, user\n" +
+                        "        where message.flagged = 0 and message.author_id = user.user_id\n" +
+                        "        order by message.pub_date desc limit ?");
+        messageStmt.setInt(1, PER_PAGE);
+        var messages = new ArrayList<HashMap<String, Object>>();
+        var messageRs = messageStmt.executeQuery();
+        while (messageRs.next()) {
+            var result = new HashMap();
+            result.put("message_id", messageRs.getInt("message_id"));
+            result.put("author_id", messageRs.getInt("author_id"));
+            result.put("text", messageRs.getString("text"));
+            result.put("pub_date", messageRs.getInt("pub_date"));
+            result.put("flagged", messageRs.getInt("flagged"));
+            result.put("username", messageRs.getString("username"));
+            result.put("email", messageRs.getString("email"));
+            messages.add(result);
+        }
+
+        return messages;
     }
 
     public static String render(Map<String, Object> model, String templatePath) {
@@ -263,27 +296,7 @@ public class WebApplication {
             model.put("title", "Public Timeline");
             model.put("login", URLS.LOGIN);
 
-            var db = new SQLite();
-            var conn = db.getConnection();
-
-            var messageStmt = conn.prepareStatement(
-                    "select message.*, user.* from message, user\n" +
-                            "        where message.flagged = 0 and message.author_id = user.user_id\n" +
-                            "        order by message.pub_date desc limit ?");
-            messageStmt.setInt(1, PER_PAGE);
-            var messages = new ArrayList<HashMap<String, Object>>();
-            var messageRs = messageStmt.executeQuery();
-            while (messageRs.next()) {
-                var result = new HashMap();
-                result.put("message_id", messageRs.getInt("message_id"));
-                result.put("author_id", messageRs.getInt("author_id"));
-                result.put("text", messageRs.getString("text"));
-                result.put("pub_date", messageRs.getInt("pub_date"));
-                result.put("flagged", messageRs.getInt("flagged"));
-                result.put("username", messageRs.getString("username"));
-                result.put("email", messageRs.getString("email"));
-                messages.add(result);
-            }
+            var messages = getMessages();
             model.put("messages", messages);
 
             return WebApplication.render(model, WebApplication.Templates.PUBLIC_TIMELINE);
@@ -504,5 +517,30 @@ public class WebApplication {
         request.session().removeAttribute("user_id");
         response.redirect(URLS.PUBLIC_TIMELINE);
         return null;
+    };
+
+    public static Filter protectEndpoint = (Request request, Response response) -> {
+        var auth = request.headers("Authorization");
+        // Auth code is simulator:super_safe!
+        if (auth == null || !auth.equals("Basic c2ltdWxhdG9yOnN1cGVyX3NhZmUh")) {
+            halt(403, gson.toJson(
+                    Map.ofEntries(
+                            Map.entry("status", 403),
+                            Map.entry("error_msg", "You are not authorized to use this resource!")
+                    )
+            ));
+        }
+    };
+
+    public static Route serveSimMsgs = (Request request, Response response) -> {
+        var messages = getMessages();
+        var filteredMessages = messages.stream().map((message) -> {
+            return Map.ofEntries(
+                    Map.entry("content", message.get("text")),
+                    Map.entry("pub_date", message.get("pub_date")),
+                    Map.entry("user", message.get("username"))
+            );
+        });
+        return filteredMessages.toList();
     };
 }
