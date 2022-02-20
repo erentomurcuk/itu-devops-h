@@ -70,6 +70,8 @@ public class WebApplication {
 
     public static Gson gson = new Gson();
 
+    public static ArrayList<String> flashes = new ArrayList<>();
+
     private static final Gravatar gravatar = new Gravatar()
             .setSize(48)
             .setRating(GravatarRating.GENERAL_AUDIENCES)
@@ -185,6 +187,8 @@ public class WebApplication {
             model.forEach((k, v) -> ctx.put(k, v));         //I think this might also be redundant
 
             ctx.put("date", new DateTool());
+
+            ctx.put("splash", flashes);
 
             if (!ctx.containsKey("title")) {
                 ctx.put("title", "Welcome");
@@ -423,16 +427,13 @@ public class WebApplication {
             var insert = conn.prepareStatement("insert into user (\n" +
                     "                username, email, pw_hash) values (?, ?, ?)");
 
-
             // TODO: Get logged in user (if any)
             // if (userIsLoggedIn) {
             //     response.redirect(URLS.LOGIN);
             //     return;
             // }
 
-            // TODO: Port flask "flashes"
             model.put("messages", new ArrayList<String>() {});
-            //model.put("splash", URLS.PUBLIC_TIMELINE);
             model.put("username", request.queryParams("username") == null ? "" : request.queryParams("username"));
             model.put("email", request.queryParams("email") == null ? "" : request.queryParams("email"));
             model.put("title", "Sign Up");
@@ -465,7 +466,7 @@ public class WebApplication {
                     insert.setString(3, saltedPW);
                     insert.execute();
 
-                    // TODO: splash "You were successfully registered and can login now"
+                    flashes.add("You were successfully registered and can login now");
 
                     response.redirect(URLS.LOGIN);
                 }
