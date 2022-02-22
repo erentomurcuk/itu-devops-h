@@ -212,8 +212,8 @@ public class WebApplication {
     }
 
     public static void updateLatest(Request request) {
-        String tryLatest = request.params("latest");
-        LATEST = Integer.parseInt(tryLatest);
+        String latest = request.params("latest");
+        LATEST = Integer.parseInt(latest);
     }
 
     public static Route add_message = (Request request, Response response)  -> {
