@@ -212,7 +212,7 @@ public class WebApplication {
     }
 
     public static void updateLatest(Request request) {
-        String latest = request.params("latest");
+        String latest = request.queryParams("latest");
         LATEST = Integer.parseInt(latest);
     }
 
