@@ -103,7 +103,7 @@ public class WebApplication {
             before("/*", protectEndpoint);
 
             get(URLS.SIM_MESSAGES, WebApplication.serveSimMsgs, gson::toJson);
-            post(URLS.SIM_REGISTER, WebApplication.serveSimRegister, gson::toJson);
+            post(URLS.SIM_REGISTER, WebApplication.serveSimRegister); // Handles JSON on its own
         });
     }
 
@@ -580,12 +580,15 @@ public class WebApplication {
         var error = register(username, email, password, password);
         if (error != null) {
             response.status(400);
-            return Map.ofEntries(
+            return gson.toJson(
+                Map.ofEntries(
                     Map.entry("status", 400),
                     Map.entry("error_msg", error)
+                )
             );
         }
 
-        return Map.ofEntries();
+        response.status(203);
+        return "";
     };
 }
