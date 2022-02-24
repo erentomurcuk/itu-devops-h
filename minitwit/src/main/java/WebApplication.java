@@ -16,14 +16,17 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class WebApplication {
+
     public static class Templates {
         public static final String PUBLIC_TIMELINE = "/templates/timeline.vm";
         public static final String LOGIN = "/templates/login.vm";
         public static final String REGISTER = "/templates/register.vm";
     }
+
     public static class URLS {
         public static final String PUBLIC_TIMELINE = "/public";
         public static final String USER_TIMELINE = "/:username";
@@ -87,7 +90,14 @@ public class WebApplication {
         port(8080);
 
         staticFiles.location("/static");
-        get("/hello", (req, res) -> "Hello");
+
+        before("/*", (req, res) -> {
+            // Setup initial session state once
+            if (req.session().isNew()) {
+                req.session().attribute("alerts", new ArrayList<>());
+            }
+        });
+
         get(URLS.PUBLIC_TIMELINE, WebApplication.servePublicTimelinePage);
         get(URLS.REGISTER, WebApplication.serveRegisterPage);
         get(URLS.LOGIN, WebApplication.serveLoginPage);
@@ -153,7 +163,7 @@ public class WebApplication {
         var messages = new ArrayList<HashMap<String, Object>>();
         var messageRs = messageStmt.executeQuery();
         while (messageRs.next()) {
-            var result = new HashMap();
+            HashMap<String, Object> result = new HashMap<>();
             result.put("message_id", messageRs.getInt("message_id"));
             result.put("author_id", messageRs.getInt("author_id"));
             result.put("text", messageRs.getString("text"));
@@ -169,7 +179,7 @@ public class WebApplication {
         return messages;
     }
 
-    public static String render(Map<String, Object> model, String templatePath) {
+    public static String render(Session session, Map<String, Object> model, String templatePath) {
         try {
             VelocityEngine engine = new VelocityEngine();
             // Required for Velocity to know where resources ends up
@@ -198,6 +208,8 @@ public class WebApplication {
 
             ctx.put("date", new DateTool());
 
+            ctx.put("alerts", session.attribute("alerts"));
+
             if (!ctx.containsKey("title")) {
                 ctx.put("title", "Welcome");
             }
@@ -210,7 +222,13 @@ public class WebApplication {
             // If a error happens above, print it and return it as a response
             e.printStackTrace();
             return e.toString();
+        } finally {
+            ((List<String>) session.attribute("alerts")).clear();
         }
+    }
+
+    private static void addAlert(Session session, String message) {
+        ((List<String>) session.attribute("alerts")).add(message);
     }
 
     // Used by timeline.vm to display user's gravatar
@@ -289,9 +307,6 @@ public class WebApplication {
             insert.execute();
 
             conn.close();
-
-            // TODO: Still no flask flashes here
-
         }
 
         catch (Exception e) {
@@ -300,8 +315,10 @@ public class WebApplication {
 
         }
 
+        addAlert(request.session(), "Your message was recorded");
+
         response.redirect(URLS.USER, 303);
-        //return WebApplication.render(model, Templates.PUBLIC_TIMELINE);
+
         return "";
     };
 
@@ -321,6 +338,8 @@ public class WebApplication {
 
         conn.close();
 
+        addAlert(request.session(), "You are now following " + request.params(":username"));
+
         return true;
     };
 
@@ -339,6 +358,8 @@ public class WebApplication {
 
         conn.close();
 
+        addAlert(request.session(), "You are no longer following " + request.params(":username"));
+
         return true;
     };
 
@@ -352,8 +373,7 @@ public class WebApplication {
             var userID = (Integer) request.session().attribute("user_id");
             var loggedInUser = getUser(conn, (userID));
             if (loggedInUser != null) model.put("user", loggedInUser.getString("username"));
-            // TODO: Port flask "flashes"
-            model.put("splash", new ArrayList());
+
             // Where does this come from in python?
             model.put("title", "Public Timeline");
             model.put("login", URLS.LOGIN);
@@ -363,7 +383,7 @@ public class WebApplication {
 
             conn.close();
 
-            return WebApplication.render(model, WebApplication.Templates.PUBLIC_TIMELINE);
+            return WebApplication.render(request.session(), model, WebApplication.Templates.PUBLIC_TIMELINE);
         } catch (Exception e) {
             e.printStackTrace();
             return e.toString();
@@ -384,10 +404,8 @@ public class WebApplication {
             conn.close();
             return "";
         }
-        // TODO: Port flask "flashes"
 
         model.put("endpoint", URLS.USER);
-        model.put("splash", new ArrayList());
         model.put("title", loggedInUser.getString("username"));
 
         var statement = conn.prepareStatement(
@@ -405,7 +423,7 @@ public class WebApplication {
 
         var results = new ArrayList<HashMap<String, Object>>();
         while (rs.next()) {
-            var result = new HashMap();
+            HashMap<String, Object> result = new HashMap<>();
             result.put("message_id", rs.getInt("message_id"));
             result.put("author_id", rs.getInt("author_id"));
             result.put("text", rs.getString("text"));
@@ -420,7 +438,7 @@ public class WebApplication {
 
         conn.close();
 
-        return WebApplication.render(model, WebApplication.Templates.PUBLIC_TIMELINE);
+        return WebApplication.render(request.session(), model, WebApplication.Templates.PUBLIC_TIMELINE);
     };
 
     public static Route serveUserByUsernameTimelinePage = (Request request, Response response) -> {
@@ -433,10 +451,6 @@ public class WebApplication {
             var userID = (Integer) request.session().attribute("user_id");
             var loggedInUser = getUser(conn, (userID));
             if (loggedInUser != null) model.put("user", loggedInUser.getString("username"));
-
-            // TODO: Port flask "flashes"
-            model.put("splash", new ArrayList());
-
 
             var profileStmt = conn.prepareStatement(
                     "select * from user where username = ?"
@@ -466,7 +480,7 @@ public class WebApplication {
             var messages = new ArrayList<HashMap<String, Object>>();
             var messageRs = messageStmt.executeQuery();
             while (messageRs.next()) {
-                var result = new HashMap();
+                HashMap<String, Object> result = new HashMap<>();
                 result.put("message_id", messageRs.getInt("message_id"));
                 result.put("author_id", messageRs.getInt("author_id"));
                 result.put("text", messageRs.getString("text"));
@@ -480,7 +494,7 @@ public class WebApplication {
 
             conn.close();
 
-            return WebApplication.render(model, WebApplication.Templates.PUBLIC_TIMELINE);
+            return WebApplication.render(request.session(), model, WebApplication.Templates.PUBLIC_TIMELINE);
         } catch (Exception e) {
             e.printStackTrace();
             return e.toString();
@@ -490,15 +504,19 @@ public class WebApplication {
     public static Route serveRegisterPage = (Request request, Response response) -> {
         Map<String, Object> model = new HashMap<>();
         try {
+
+            var db = new SQLite();
+            var conn = db.getConnection();
+            var insert = conn.prepareStatement("insert into user (\n" +
+                    "username, email, pw_hash) values (?, ?, ?)");
+
             // TODO: Get logged in user (if any)
             // if (userIsLoggedIn) {
             //     response.redirect(URLS.LOGIN);
             //     return;
             // }
 
-            // TODO: Port flask "flashes"
             model.put("messages", new ArrayList<String>() {});
-            //model.put("splash", URLS.PUBLIC_TIMELINE);
             model.put("username", request.queryParams("username") == null ? "" : request.queryParams("username"));
             model.put("email", request.queryParams("email") == null ? "" : request.queryParams("email"));
             model.put("title", "Sign Up");
@@ -513,7 +531,13 @@ public class WebApplication {
                 if (error != null) {
                     model.put("error", error);
                 } else {
+                    addAlert(request.session(), "You were successfully registered and can log in now");
+
                     response.redirect(URLS.LOGIN);
+
+                    // No need to render due to redirect
+                    // Rendering would clear the alerts too early
+                    return null;
                 }
             }
         } catch (Exception e) {
@@ -521,11 +545,11 @@ public class WebApplication {
             return e.toString();
         }
 
-        return WebApplication.render(model, WebApplication.Templates.REGISTER);
+        return WebApplication.render(request.session(), model, WebApplication.Templates.REGISTER);
     };
 
     public static Route serveLoginPage = (Request request, Response response) -> {
-        if(request.session().attribute("user_id") != null) {
+        if (request.session().attribute("user_id") != null) {
             response.redirect(URLS.USER);
         }
         Map<String, Object> model = new HashMap<>();
@@ -550,19 +574,31 @@ public class WebApplication {
             }
             else {
                 var userID = rs.getInt("user_id");
-
                 request.session().attribute("user_id", userID);
+
+                rs.close();
+                connection.close();
+
+                addAlert(request.session(), "You were logged in");
+
                 response.redirect(URLS.USER);
+
+                // No need to render due to redirect
+                // Rendering would clear the alerts too early
+                return null;
             }
             rs.close();
             connection.close();
         }
-        return render(model, Templates.LOGIN);
+        return WebApplication.render(request.session(), model, Templates.LOGIN);
     };
 
     public static Route handleLogoutRequest = (Request request, Response response) -> {
         Map<String, Object> model = new HashMap<>();
         request.session().removeAttribute("user_id");
+
+        addAlert(request.session(), "You were logged out");
+
         response.redirect(URLS.PUBLIC_TIMELINE);
         return null;
     };
