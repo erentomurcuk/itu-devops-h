@@ -291,7 +291,11 @@ public class WebApplication {
 
             conn.close();
 
-            return true;
+            response.redirect(URLS.urlFor(URLS.USER_TIMELINE, Map.ofEntries(
+                    Map.entry("username", request.params(":username"))
+            )));
+
+            return "";
         } catch (Exception e) {
             conn.close();
             e.printStackTrace();
@@ -314,7 +318,11 @@ public class WebApplication {
 
         conn.close();
 
-        return true;
+        response.redirect(URLS.urlFor(URLS.USER_TIMELINE, Map.ofEntries(
+                Map.entry("username", request.params(":username"))
+        )));
+
+        return "";
     };
 
     public static Route servePublicTimelinePage = (Request request, Response response) -> {
