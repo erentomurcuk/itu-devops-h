@@ -15,9 +15,9 @@
     <a href=${LOGIN}>sign in</a>
   #end
   </div>
-  #if ($splash && $splash.size() != 0)
+  #if ($alerts && $alerts.size() != 0)
     <ul class=flashes>
-    #foreach( $message in $splash )
+    #foreach( $message in $alerts )
       <li>$message</li>
     #end
     </ul>
