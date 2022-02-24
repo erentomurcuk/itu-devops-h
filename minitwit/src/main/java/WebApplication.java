@@ -68,6 +68,7 @@ public class WebApplication {
 
         // Sim API
         public static final String SIM_MESSAGES = "/msgs";
+        public static final String SIM_REGISTER = "/register";
         public static final String SIM_LATEST = "/latest";
     }
 
@@ -116,6 +117,7 @@ public class WebApplication {
             before("/*", protectEndpoint);
 
             get(URLS.SIM_MESSAGES, WebApplication.serveSimMsgs, gson::toJson);
+            post(URLS.SIM_REGISTER, WebApplication.serveSimRegister); // Handles JSON on its own
             get(URLS.SIM_LATEST, WebApplication.serveSimLatest, gson::toJson);
         });
     }
@@ -232,6 +234,45 @@ public class WebApplication {
     // Used by timeline.vm to display user's gravatar
     public static String getGravatarURL(String email) {
         return gravatar.getUrl(email);
+    }
+
+    public static String register(String username, String email, String password, String password2) throws SQLException {
+        var db = new SQLite();
+        if (username == null
+                || username.equals("")) {
+            return "You have to enter a username";
+        }
+        else if (email == null
+                || email.equals("")
+                || !email.contains("@")) {
+            return "You have to enter a valid email";
+        }
+        else if (password == null
+                || password2 == null) {
+            return "You have to enter a password";
+        }
+        else if (!password.equals(password2)) {
+            return "The two passwords do not match";
+        }
+        else if (getUserID(db, username) != 0) {
+            return "The username is already taken";
+        }
+        else {
+            String saltedPW = BCrypt.hashpw(password, BCrypt.gensalt());
+
+            var conn = new SQLite().getConnection();
+            var insert = conn.prepareStatement("insert into user (\n" +
+                    "                username, email, pw_hash) values (?, ?, ?)");
+
+            insert.setString(1, username);
+            insert.setString(2, email);
+            insert.setString(3, saltedPW);
+            insert.execute();
+
+            conn.close();
+
+            return null;
+        }
     }
 
     public static void updateLatest(Request request) {
@@ -463,10 +504,11 @@ public class WebApplication {
     public static Route serveRegisterPage = (Request request, Response response) -> {
         Map<String, Object> model = new HashMap<>();
         try {
+
             var db = new SQLite();
             var conn = db.getConnection();
             var insert = conn.prepareStatement("insert into user (\n" +
-                    "                username, email, pw_hash) values (?, ?, ?)");
+                    "username, email, pw_hash) values (?, ?, ?)");
 
             // TODO: Get logged in user (if any)
             // if (userIsLoggedIn) {
@@ -480,35 +522,15 @@ public class WebApplication {
             model.put("title", "Sign Up");
 
             if (request.requestMethod().equals("POST")) {
-                if (request.queryParams("username") == null
-                        || request.queryParams("username").equals("")) {
-                    model.put("error", "You have to enter a username");
-                }
-                else if (request.queryParams("email") == null
-                        || request.queryParams("email").equals("")
-                        || !request.queryParams("email").contains("@")) {
-                    model.put("error", "You have to enter a valid email");
-                }
-                else if (request.queryParams("password") == null
-                        || request.queryParams("password2") == null) {
-                    model.put("error", "You have to enter a password");
-                }
-                else if (!request.queryParams("password").equals(request.queryParams("password2"))) {
-                    model.put("error", "The two passwords do not match");
-                }
-                else if (getUserID(db, request.queryParams("username")) != 0) {
-                    model.put("error", "The username is already taken");
-                }
-                else {
-                    String saltedPW = BCrypt.hashpw(request.queryParams("password"), BCrypt.gensalt());
+                var username = request.queryParams("username");
+                var email = request.queryParams("email");
+                var password = request.queryParams("password");
+                var password2 = request.queryParams("password2");
 
-                    insert.setString(1, request.queryParams("username"));
-                    insert.setString(2, request.queryParams("email"));
-                    insert.setString(3, saltedPW);
-                    insert.execute();
-
-                    conn.close();
-
+                var error = register(username, email, password, password2);
+                if (error != null) {
+                    model.put("error", error);
+                } else {
                     addAlert(request.session(), "You were successfully registered and can log in now");
 
                     response.redirect(URLS.LOGIN);
@@ -518,7 +540,6 @@ public class WebApplication {
                     return null;
                 }
             }
-            conn.close();
         } catch (Exception e) {
             e.printStackTrace();
             return e.toString();
@@ -608,6 +629,34 @@ public class WebApplication {
             );
         });
         return filteredMessages.toList();
+    };
+
+    public static Route serveSimRegister = (Request request, Response response) -> {
+        try {
+            updateLatest(request);
+
+            var json = gson.fromJson(request.body(), HashMap.class);
+            var username = String.valueOf(json.get("username"));
+            var email = String.valueOf(json.get("email"));
+            var password = String.valueOf(json.get("pwd"));
+
+            var error = register(username, email, password, password);
+            if (error != null) {
+                response.status(400);
+                return gson.toJson(
+                        Map.ofEntries(
+                                Map.entry("status", 400),
+                                Map.entry("error_msg", error)
+                        )
+                );
+            }
+
+            response.status(203);
+            return "";
+        } catch (Exception e) {
+            e.printStackTrace();
+            return e.toString();
+        }
     };
 
     public static Route serveSimLatest = (Request request, Response response) -> {
