@@ -66,11 +66,15 @@ public class WebApplication {
         // Sim API
         public static final String SIM_MESSAGES = "/msgs";
         public static final String SIM_REGISTER = "/register";
+        public static final String SIM_LATEST = "/latest";
     }
 
     public static int PER_PAGE = 30;
 
     public static Gson gson = new Gson();
+
+    // The ID of the latest request made by the simulator
+    public static int LATEST = 0;
 
     private static final Gravatar gravatar = new Gravatar()
             .setSize(48)
@@ -104,6 +108,7 @@ public class WebApplication {
 
             get(URLS.SIM_MESSAGES, WebApplication.serveSimMsgs, gson::toJson);
             post(URLS.SIM_REGISTER, WebApplication.serveSimRegister); // Handles JSON on its own
+            get(URLS.SIM_LATEST, WebApplication.serveSimLatest, gson::toJson);
         });
     }
 
@@ -127,10 +132,13 @@ public class WebApplication {
 
         // No user with that username found
         if (rs.isClosed()) {
+            conn.close();
             return 0;
         }
 
-        return rs.getInt("user_id");
+        var userID = rs.getInt("user_id");
+        conn.close();
+        return userID;
     }
 
     public static ArrayList<HashMap<String, Object>> getMessages() throws SQLException {
@@ -155,6 +163,8 @@ public class WebApplication {
             result.put("email", messageRs.getString("email"));
             messages.add(result);
         }
+
+        conn.close();
 
         return messages;
     }
@@ -232,7 +242,7 @@ public class WebApplication {
         else {
             String saltedPW = BCrypt.hashpw(password, BCrypt.gensalt());
 
-            var conn = db.getConnection();
+            var conn = new SQLite().getConnection();
             var insert = conn.prepareStatement("insert into user (\n" +
                     "                username, email, pw_hash) values (?, ?, ?)");
 
@@ -244,6 +254,13 @@ public class WebApplication {
             conn.close();
 
             return null;
+        }
+    }
+
+    public static void updateLatest(Request request) {
+        String latest = request.queryParams("latest");
+        if (latest != null) {
+            LATEST = Integer.parseInt(latest);
         }
     }
 
@@ -344,6 +361,8 @@ public class WebApplication {
             var messages = getMessages();
             model.put("messages", messages);
 
+            conn.close();
+
             return WebApplication.render(model, WebApplication.Templates.PUBLIC_TIMELINE);
         } catch (Exception e) {
             e.printStackTrace();
@@ -362,6 +381,8 @@ public class WebApplication {
 
         else if (loggedInUser == null) {
             response.redirect(URLS.PUBLIC_TIMELINE);
+            conn.close();
+            return "";
         }
         // TODO: Port flask "flashes"
 
@@ -560,6 +581,9 @@ public class WebApplication {
     };
 
     public static Route serveSimMsgs = (Request request, Response response) -> {
+        // Update LATEST static variable
+        updateLatest(request);
+
         var messages = getMessages();
         var filteredMessages = messages.stream().map((message) -> {
             return Map.ofEntries(
@@ -572,23 +596,36 @@ public class WebApplication {
     };
 
     public static Route serveSimRegister = (Request request, Response response) -> {
-        var json = gson.fromJson(request.body(), HashMap.class);
-        var username = String.valueOf(json.get("username"));
-        var email = String.valueOf(json.get("email"));
-        var password = String.valueOf(json.get("pwd"));
+        try {
+            updateLatest(request);
 
-        var error = register(username, email, password, password);
-        if (error != null) {
-            response.status(400);
-            return gson.toJson(
-                Map.ofEntries(
-                    Map.entry("status", 400),
-                    Map.entry("error_msg", error)
-                )
-            );
+            var json = gson.fromJson(request.body(), HashMap.class);
+            var username = String.valueOf(json.get("username"));
+            var email = String.valueOf(json.get("email"));
+            var password = String.valueOf(json.get("pwd"));
+
+            var error = register(username, email, password, password);
+            if (error != null) {
+                response.status(400);
+                return gson.toJson(
+                        Map.ofEntries(
+                                Map.entry("status", 400),
+                                Map.entry("error_msg", error)
+                        )
+                );
+            }
+
+            response.status(203);
+            return "";
+        } catch (Exception e) {
+            e.printStackTrace();
+            return e.toString();
         }
+    };
 
-        response.status(203);
-        return "";
+    public static Route serveSimLatest = (Request request, Response response) -> {
+        Map<String, Integer> map = new HashMap<>();
+        map.put("latest", LATEST);
+        return map;
     };
 }
