@@ -125,10 +125,13 @@ public class WebApplication {
 
         // No user with that username found
         if (rs.isClosed()) {
+            conn.close();
             return 0;
         }
 
-        return rs.getInt("user_id");
+        var userID = rs.getInt("user_id");
+        conn.close();
+        return userID;
     }
 
     public static ArrayList<HashMap<String, Object>> getMessages() throws SQLException {
@@ -153,6 +156,8 @@ public class WebApplication {
             result.put("email", messageRs.getString("email"));
             messages.add(result);
         }
+
+        conn.close();
 
         return messages;
     }
@@ -303,6 +308,8 @@ public class WebApplication {
             var messages = getMessages();
             model.put("messages", messages);
 
+            conn.close();
+
             return WebApplication.render(model, WebApplication.Templates.PUBLIC_TIMELINE);
         } catch (Exception e) {
             e.printStackTrace();
@@ -321,6 +328,8 @@ public class WebApplication {
 
         else if (loggedInUser == null) {
             response.redirect(URLS.PUBLIC_TIMELINE);
+            conn.close();
+            return "";
         }
         // TODO: Port flask "flashes"
 
