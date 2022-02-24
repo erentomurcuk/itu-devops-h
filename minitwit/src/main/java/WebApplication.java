@@ -571,6 +571,8 @@ public class WebApplication {
     };
 
     public static Route serveSimLatest = (Request request, Response response) -> {
-        return new HashMap<>().put("latest", LATEST);
+        Map<String, Integer> map = new HashMap<>();
+        map.put("latest", LATEST);
+        return map;
     };
 }
