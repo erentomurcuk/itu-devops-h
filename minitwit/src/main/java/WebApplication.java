@@ -90,8 +90,8 @@ public class WebApplication {
 
         post(URLS.REGISTER, WebApplication.serveRegisterPage);
         post(URLS.ADD_MESSAGE, WebApplication.add_message);
-        post(URLS.FOLLOW, WebApplication.serveFollowPage);
-        post(URLS.UNFOLLOW, WebApplication.serveUnfollowPage);
+        get(URLS.FOLLOW, WebApplication.serveFollowPage);
+        get(URLS.UNFOLLOW, WebApplication.serveUnfollowPage);
         get(URLS.USER, WebApplication.serveUserTimelinePage);
         get(URLS.USER_TIMELINE, WebApplication.serveUserByUsernameTimelinePage);
         post(URLS.LOGIN, WebApplication.serveLoginPage);
@@ -248,22 +248,38 @@ public class WebApplication {
     };
 
     public static Route serveFollowPage = (Request request, Response response) -> {
-
         var db = new SQLite();
         var conn = db.getConnection();
+        try {
 
-        var insert = conn.prepareStatement("insert into follower (\n" +
-                "                who_id, whom_id) values (?, ?)");
+            var insert = conn.prepareStatement("insert into follower (\n" +
+                    "                who_id, whom_id) values (?, ?)");
 
-        var whom_id = getUserID(db, request.params(":username"));
+            Integer currentUserID = request.session().attribute("user_id");
+            if (currentUserID == null) {
+                response.status(401);
+                return "";
+            }
 
-        insert.setInt(1, 999); //TODO: Get current users_id
-        insert.setInt(2, whom_id);
-        insert.execute();
+            var whom_id = getUserID(db, request.params(":username"));
 
-        conn.close();
+            if (whom_id == 0) {
+                response.status(404);
+                return "";
+            }
 
-        return true;
+            insert.setInt(1, currentUserID);
+            insert.setInt(2, whom_id);
+            insert.execute();
+
+            conn.close();
+
+            return true;
+        } catch (Exception e) {
+            conn.close();
+            e.printStackTrace();
+            return e.toString();
+        }
     };
 
     public static Route serveUnfollowPage = (Request request, Response response) -> {
@@ -275,7 +291,7 @@ public class WebApplication {
 
         var whom_id = getUserID(db, request.params(":username"));
 
-        insert.setInt(1, 999); //TODO: Get current users_id
+        insert.setInt(1, request.session().attribute("user_id"));
         insert.setInt(2, whom_id);
         insert.execute();
 
@@ -370,11 +386,15 @@ public class WebApplication {
 
             var userID = (Integer) request.session().attribute("user_id");
             var loggedInUser = getUser(conn, (userID));
-            if (loggedInUser != null) model.put("user", loggedInUser.getString("username"));
+            if (loggedInUser != null) {
+                model.put("user_name", loggedInUser.getString("username"));
+                model.put("user_id", loggedInUser.getInt("user_id"));
+            }
 
             // TODO: Port flask "flashes"
             model.put("splash", new ArrayList());
 
+            model.put("endpoint", URLS.USER_TIMELINE);
 
             var profileStmt = conn.prepareStatement(
                     "select * from user where username = ?"
@@ -394,6 +414,21 @@ public class WebApplication {
             profileRs.close();
 
             model.put("title", profileUser.get("username"));
+
+            if (userID != null) {
+                var followedStmt = conn.prepareStatement("select 1 from follower where\n" +
+                        "follower.who_id = ? and follower.whom_id = ?");
+                followedStmt.setInt(1, userID);
+                followedStmt.setInt(2, (Integer) profileUser.get("user_id"));
+                var followedRs = followedStmt.executeQuery();
+                if (!followedRs.isClosed()) {
+                    model.put("followed", true);
+                } else {
+                    model.put("followed", false);
+                }
+            } else {
+                model.put("followed", false);
+            }
 
             var messageStmt = conn.prepareStatement(
                     "select message.*, user.* from message, user where\n" +
