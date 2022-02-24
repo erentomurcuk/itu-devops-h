@@ -434,7 +434,7 @@ public class WebApplication {
             var userID = (Integer) request.session().attribute("user_id");
             var loggedInUser = getUser(conn, (userID));
             if (loggedInUser != null) {
-                model.put("user_name", loggedInUser.getString("username"));
+                model.put("user", loggedInUser.getString("username"));
                 model.put("user_id", loggedInUser.getInt("user_id"));
             }
 

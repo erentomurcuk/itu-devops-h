@@ -1,7 +1,7 @@
 #parse("/templates/layout.vm")
 #@mainLayout()
     <h2>$title</h2>
-    #if ($user_id)
+    #if ($user)
       #if ($endpoint.equals($USER_TIMELINE))
         <div class=followstatus>
         #if(${user_id} == $profile_user.user_id)
