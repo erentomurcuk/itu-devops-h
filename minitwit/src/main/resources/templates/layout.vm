@@ -6,7 +6,7 @@
   <h1>MiniTwit</h1>
   <div class=navigation>
   #if ($user)
-    <a href=${user}>my timeline</a> |
+    <a href=${USER}>my timeline</a> |
     <a href=${PUBLIC_TIMELINE}>public timeline</a> |
     <a href=${LOGOUT}>sign out [$user]</a>
   #else

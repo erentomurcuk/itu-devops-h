@@ -335,7 +335,7 @@ public class WebApplication {
 
         model.put("endpoint", URLS.USER);
         model.put("splash", new ArrayList());
-        model.put("title", loggedInUser.getString("username"));
+        model.put("title", "My Timeline");
 
         var statement = conn.prepareStatement(
                 "        select message.*, user.* from message, user\n" +
@@ -402,7 +402,7 @@ public class WebApplication {
             model.put("profile_user", profileUser);
             profileRs.close();
 
-            model.put("title", profileUser.get("username"));
+            model.put("title", profileUser.get("username") + "'s Timeline");
 
             var messageStmt = conn.prepareStatement(
                     "select message.*, user.* from message, user where\n" +
