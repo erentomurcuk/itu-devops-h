@@ -65,11 +65,15 @@ public class WebApplication {
 
         // Sim API
         public static final String SIM_MESSAGES = "/msgs";
+        public static final String SIM_LATEST = "/latest";
     }
 
     public static int PER_PAGE = 30;
 
     public static Gson gson = new Gson();
+
+    // The ID of the latest request made by the simulator
+    public static int LATEST = 0;
 
     private static final Gravatar gravatar = new Gravatar()
             .setSize(48)
@@ -102,6 +106,7 @@ public class WebApplication {
             before("/*", protectEndpoint);
 
             get(URLS.SIM_MESSAGES, WebApplication.serveSimMsgs, gson::toJson);
+            get(URLS.SIM_LATEST, WebApplication.serveSimLatest, gson::toJson);
         });
     }
 
@@ -209,6 +214,13 @@ public class WebApplication {
     // Used by timeline.vm to display user's gravatar
     public static String getGravatarURL(String email) {
         return gravatar.getUrl(email);
+    }
+
+    public static void updateLatest(Request request) {
+        String latest = request.queryParams("latest");
+        if (latest != null) {
+            LATEST = Integer.parseInt(latest);
+        }
     }
 
     public static Route add_message = (Request request, Response response)  -> {
@@ -555,6 +567,9 @@ public class WebApplication {
     };
 
     public static Route serveSimMsgs = (Request request, Response response) -> {
+        // Update LATEST static variable
+        updateLatest(request);
+
         var messages = getMessages();
         var filteredMessages = messages.stream().map((message) -> {
             return Map.ofEntries(
@@ -564,5 +579,11 @@ public class WebApplication {
             );
         });
         return filteredMessages.toList();
+    };
+
+    public static Route serveSimLatest = (Request request, Response response) -> {
+        Map<String, Integer> map = new HashMap<>();
+        map.put("latest", LATEST);
+        return map;
     };
 }
