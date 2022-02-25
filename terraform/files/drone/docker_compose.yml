@@ -1,0 +1,35 @@
+version: '2'
+services:
+  drone-server:
+    image: drone/drone:2.9.1
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - drone
+    volumes:
+      - /opt/drone-data:/data
+    environment:
+      DRONE_GITHUB_CLIENT_ID: ${DRONE_GITHUB_CLIENT_ID}
+      DRONE_GITHUB_CLIENT_SECRET: ${DRONE_GITHUB_CLIENT_SECRET}
+      DRONE_RPC_SECRET: ${DRONE_RPC_SECRET}
+      DRONE_SERVER_HOST: ${DRONE_SERVER_HOST}
+      DRONE_SERVER_PROTO: ${DRONE_SERVER_PROTO}
+
+  drone-runner-do:
+    image: drone/drone-runner-digitalocean:1.0.1
+    volumes:
+      - /root/id_rsa:${DRONE_PRIVATE_KEY_FILE}
+      - /root/id_rsa.pub:${DRONE_PUBLIC_KEY_FILE}
+    environment:
+      DRONE_RPC_PROTO: ${DRONE_RPC_PROTO}
+      DRONE_RPC_HOST: ${DRONE_RPC_HOST}
+      DRONE_RPC_SECRET: ${DRONE_RPC_SECRET}
+      DRONE_PUBLIC_KEY_FILE: ${DRONE_PUBLIC_KEY_FILE}
+      DRONE_PRIVATE_KEY_FILE: ${DRONE_PRIVATE_KEY_FILE}
+
+networks:
+  drone:
+    driver: bridge
+
+
