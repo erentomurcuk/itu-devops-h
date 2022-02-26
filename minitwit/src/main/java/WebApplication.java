@@ -4,7 +4,6 @@ import com.timgroup.jgravatar.GravatarDefaultImage;
 import com.timgroup.jgravatar.GravatarRating;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.VelocityEngine;
-import org.apache.velocity.runtime.directive.Parse;
 import org.apache.velocity.tools.generic.DateTool;
 import org.springframework.security.crypto.bcrypt.BCrypt;
 import spark.*;
@@ -19,7 +18,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 public class WebApplication {
 
@@ -89,7 +87,6 @@ public class WebApplication {
 
     public static void main(String[] args) {
         System.out.println("Hello Minitwit");
-        System.out.println(BCrypt.hashpw("s", BCrypt.gensalt()));
 
         port(8080);
 
@@ -678,10 +675,13 @@ public class WebApplication {
         return filteredMessages.toList();
     };
 
+    //  --------------------------------------
+    //              Simulator API
+    //  ---------------------------------------
+
     public static Route serveSimMsgsUsr = (Request request, Response response) -> {
 
-        //TODO: Need to call update need to call update latest before (uncomment next line)
-        //updateLatest(request);
+        updateLatest(request);
 
         SQLite db = new SQLite();
         var connection = db.getConnection();
