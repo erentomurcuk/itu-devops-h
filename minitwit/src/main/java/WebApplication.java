@@ -440,8 +440,8 @@ public class WebApplication {
                         "                                    where who_id = ?))\n" +
                         "        order by message.pub_date desc limit ?");
 
-        statement.setInt(1, request.session().attribute("user_id")); // TODO: user id
-        statement.setInt(2, request.session().attribute("user_id")); // TODO: user id
+        statement.setInt(1, request.session().attribute("user_id"));
+        statement.setInt(2, request.session().attribute("user_id"));
         statement.setInt(3, WebApplication.PER_PAGE);
         ResultSet rs = statement.executeQuery();
 
