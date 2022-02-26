@@ -4,6 +4,7 @@ import com.timgroup.jgravatar.GravatarDefaultImage;
 import com.timgroup.jgravatar.GravatarRating;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.VelocityEngine;
+import org.apache.velocity.runtime.directive.Parse;
 import org.apache.velocity.tools.generic.DateTool;
 import org.springframework.security.crypto.bcrypt.BCrypt;
 import spark.*;
@@ -17,6 +18,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 public class WebApplication {
     public static class Templates {
@@ -65,6 +67,7 @@ public class WebApplication {
 
         // Sim API
         public static final String SIM_MESSAGES = "/msgs";
+        public static final String SIM_MSGS_USR = "/msgs/:username";
     }
 
     public static int PER_PAGE = 30;
@@ -78,6 +81,7 @@ public class WebApplication {
 
     public static void main(String[] args) {
         System.out.println("Hello Minitwit");
+        System.out.println(BCrypt.hashpw("s", BCrypt.gensalt()));
 
         port(8080);
 
@@ -87,21 +91,22 @@ public class WebApplication {
         get(URLS.REGISTER, WebApplication.serveRegisterPage);
         get(URLS.LOGIN, WebApplication.serveLoginPage);
         get(URLS.LOGOUT, WebApplication.handleLogoutRequest);
+        get(URLS.USER, WebApplication.serveUserTimelinePage);
+        get(URLS.USER_TIMELINE, WebApplication.serveUserByUsernameTimelinePage);
 
         post(URLS.REGISTER, WebApplication.serveRegisterPage);
         post(URLS.ADD_MESSAGE, WebApplication.add_message);
         post(URLS.FOLLOW, WebApplication.serveFollowPage);
         post(URLS.UNFOLLOW, WebApplication.serveUnfollowPage);
-        get(URLS.USER, WebApplication.serveUserTimelinePage);
-        get(URLS.USER_TIMELINE, WebApplication.serveUserByUsernameTimelinePage);
         post(URLS.LOGIN, WebApplication.serveLoginPage);
 
         // Sim API
         path("/api", () -> {
             // All endpoints in this path must be authenticated
-            before("/*", protectEndpoint);
+            //before("/*", protectEndpoint);
 
             get(URLS.SIM_MESSAGES, WebApplication.serveSimMsgs, gson::toJson);
+            get(URLS.SIM_MSGS_USR, WebApplication.serveSimMsgsUsr, gson::toJson);
         });
     }
 
@@ -471,6 +476,7 @@ public class WebApplication {
                     String saltedPW = BCrypt.hashpw(request.queryParams("password"), BCrypt.gensalt());
 
                     insert.setString(1, request.queryParams("username"));
+                    System.out.println(BCrypt.hashpw("s", BCrypt.gensalt()));
                     insert.setString(2, request.queryParams("email"));
                     insert.setString(3, saltedPW);
                     insert.execute();
@@ -547,13 +553,74 @@ public class WebApplication {
 
     public static Route serveSimMsgs = (Request request, Response response) -> {
         var messages = getMessages();
-        var filteredMessages = messages.stream().map((message) -> {
-            return Map.ofEntries(
-                    Map.entry("content", message.get("text")),
-                    Map.entry("pub_date", message.get("pub_date")),
-                    Map.entry("user", message.get("username"))
-            );
-        });
+        var filteredMessages = messages.stream().map((message) -> Map.ofEntries(
+               Map.entry("content", message.get("text")),
+               Map.entry("pub_date", message.get("pub_date")),
+               Map.entry("user", message.get("username"))
+       ));
         return filteredMessages.toList();
     };
+
+    public static Route serveSimMsgsUsr = (Request request, Response response) -> {
+
+        //TODO: Need to call update need to call update latest before (uncomment next line)
+        //updateLatest(request);
+
+        SQLite db = new SQLite();
+        var connection = db.getConnection();
+        var userID = getUserID(db, request.params(":username"));
+
+        int noMsgs =  Integer.parseInt(request.queryParamOrDefault("no", "100"));
+
+        if (request.requestMethod().equals("GET")){
+            if (userID == 0) {
+                halt(404, "404: Could not find user!"); //How do we treat 404?
+            }
+            else {
+                var query = connection.prepareStatement("SELECT message.*, user.* FROM message, user " +
+                        "                   WHERE message.flagged = 0 AND" +
+                        "                   user.user_id = message.author_id AND user.user_id = ?" +
+                        "                   ORDER BY message.pub_date DESC LIMIT ?" );
+                query.setInt(1, userID);
+                query.setInt(2, noMsgs);
+                var messages = query.executeQuery();
+                var filteredMessages = new ArrayList<Map>();
+                while(messages.next()) {
+                    var filteredMessage = new HashMap();
+                    filteredMessage.put("content", messages.getString("text"));
+                    filteredMessage.put("pub_date", messages.getInt("pub_date"));
+                    filteredMessage.put("user", messages.getString("username"));
+                    filteredMessages.add(filteredMessage);
+                }
+                return filteredMessages.stream().toList();
+            }
+        }
+        else if (request.requestMethod().equals("POST")) {
+            var text = request.queryParams("content");
+            var time = System.currentTimeMillis() / 1000L;
+
+            var query = connection.prepareStatement("INSERT INTO message (author_id, text, pub_date, flagged) VALUES (?, ?, ?, 0)");
+            query.setInt(1, userID);
+            query.setString(2, text);
+            query.setLong(3, time);
+
+            query.execute();
+            connection.close();
+            return "204";
+        }
+        return null ;
+    };
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
