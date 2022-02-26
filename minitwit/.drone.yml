@@ -1,0 +1,16 @@
+kind: pipeline
+type: digitalocean
+name: default
+
+token:
+  from_secret: token
+
+server:
+  image: ubuntu-20-04-x64
+  size: s-1vcpu-1gb
+  region: ams3
+
+steps:
+- name: testing
+  commands:
+  - echo "Hello world!"
