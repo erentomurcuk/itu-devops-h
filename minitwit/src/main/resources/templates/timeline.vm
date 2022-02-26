@@ -4,7 +4,7 @@
     #if ($user)
       #if ($endpoint.equals($USER_TIMELINE))
         <div class=followstatus>
-        #if($user.equals($profile_user.user_id))
+        #if(${user_id} == $profile_user.user_id)
           This is you!
         #elseif ($followed)
           You are currently following this user.
@@ -17,7 +17,7 @@
         </div>
       #elseif ($endpoint.equals($USER))
         <div class=twitbox>
-          <h3>What's on your mind $user?</h3>
+          <h3>What's on your mind ${user}?</h3>
           <form action="${urls.urlFor($ADD_MESSAGE)}" method=post>
             <p><input type=text name=text size=60><!--
             --><input type=submit value="Share">
