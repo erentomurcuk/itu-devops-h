@@ -403,31 +403,30 @@ public class WebApplication {
         var db = new SQLite();
         var conn = db.getConnection();
 
-        var who_id = getUserID(db, request.params(":username"));
+        var who_id = getUserID(new SQLite(), request.params(":username"));
 
         if (who_id == 0) {
             conn.close();
             response.status(404);
-            return false;
+            return "";
         }
 
         Gson gson = new Gson();
         Fllws fllws = gson.fromJson(request.body(), Fllws.class);
 
 
-        if (Objects.equals(request.requestMethod(), "POST") && !fllws.follow.isEmpty()) {
+        if (Objects.equals(request.requestMethod(), "POST") && (fllws.follow == null || !fllws.follow.isEmpty())) {
 
             var whom_id = getUserID(db, fllws.follow);
 
             if (whom_id == 0) {
                 conn.close();
                 response.status(404);
-                return false;
+                return "";
             }
 
 
-            var insert = conn.prepareStatement("insert into follower (\n" +
-                    "                who_id, whom_id) values (?, ?)");
+            var insert = conn.prepareStatement("insert into follower (who_id, whom_id) values (?, ?)");
 
             insert.setInt(1, who_id);
             insert.setInt(2, whom_id);
@@ -436,18 +435,18 @@ public class WebApplication {
             conn.close();
 
             response.status(200);
-            return true;
+            return "";
 
         }
 
-        if (Objects.equals(request.requestMethod(), "POST") && !fllws.unfollow.isEmpty()) {
+        if (Objects.equals(request.requestMethod(), "POST") && (fllws.follow == null || !fllws.unfollow.isEmpty())) {
 
             var whom_id = getUserID(db, fllws.unfollow);
 
             if (whom_id == 0) {
                 conn.close();
                 response.status(404);
-                return false;
+                return "";
             }
 
             var insert = conn.prepareStatement("delete from follower where who_id=? and whom_id=?");
@@ -458,17 +457,18 @@ public class WebApplication {
 
             conn.close();
 
-            response.status(200);
-            return true;
+            response.status(204);
+            return "";
         }
 
         if (Objects.equals(request.requestMethod(), "GET")) {
 
-            var insert = conn.prepareStatement("SELECT user.username FROM user INNER JOIN follower ON follower.whom_id=? WHERE follower.who_id=? LIMIT ?");
+            var insert = conn.prepareStatement("SELECT user.username FROM user INNER JOIN follower ON follower.whom_id=user.user_id WHERE follower.who_id=? LIMIT ?");
 
-            insert.setInt(1, request.session().attribute("user_id"));
-            insert.setInt(2, who_id);
-            insert.setInt(3, 100);
+            var noFollowers = Integer.parseInt(request.queryParamOrDefault("no", "100"));
+
+            insert.setInt(1, who_id);
+            insert.setInt(2, noFollowers);
 
             var rs = insert.executeQuery();
 
@@ -486,7 +486,7 @@ public class WebApplication {
 
         conn.close();
 
-        return true;
+        return "";
     };
 
     private class Fllws {
