@@ -21,7 +21,7 @@ public class SQLite {
     }
 
     public Connection getConnection() throws SQLException {
-        if (connection != null) {
+        if (connection != null && !connection.isValid(1)) {
             return connection;
         } else {
             return connect();

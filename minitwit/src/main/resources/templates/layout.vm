@@ -1,12 +1,12 @@
 #macro(mainLayout)
 <!doctype html>
-<title>{% block title %}Welcome{% endblock %} | MiniTwit</title>
+<title>${title} | MiniTwit</title>
 <link rel=stylesheet type=text/css href="/style.css">
 <div class=page>
   <h1>MiniTwit</h1>
   <div class=navigation>
   #if ($user)
-    <a href=${USER_TIMELINE}>my timeline</a> |
+    <a href=${USER}>my timeline</a> |
     <a href=${PUBLIC_TIMELINE}>public timeline</a> |
     <a href=${LOGOUT}>sign out [$user]</a>
   #else
@@ -15,9 +15,9 @@
     <a href=${LOGIN}>sign in</a>
   #end
   </div>
-  #if ($splash.size() != 0)
-    <ul class=fs>
-    #foreach( $message in $splash )
+  #if ($alerts && $alerts.size() != 0)
+    <ul class=flashes>
+    #foreach( $message in $alerts )
       <li>$message</li>
     #end
     </ul>
