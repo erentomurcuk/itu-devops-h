@@ -224,19 +224,17 @@ public class WebApplication {
 
     public static Route serveSimFllws = (Request request, Response response) -> {
 
-        System.out.println("Fllws called");
-
-        //update_latest(request); //TODO: implement
-
+        //update_latest(request); //TODO: call
 
         var db = new SQLite();
         var conn = db.getConnection();
 
-        var whom_id = getUserID(db, request.params(":username"));
+        var who_id = getUserID(db, request.params(":username"));
 
-        if (whom_id == 0) {
+        if (who_id == 0) {
+            conn.close();
             response.status(404);
-            //return false;
+            return false;
         }
 
         Gson gson = new Gson();
@@ -244,16 +242,15 @@ public class WebApplication {
 
 
         if (Objects.equals(request.requestMethod(), "POST") && !fllws.follow.isEmpty()) {
-            System.out.println("post follow");
 
-            var who_id = getUserID(db, fllws.follow);
+            var whom_id = getUserID(db, fllws.follow);
 
-            if (who_id == 0) {
+            if (whom_id == 0) {
+                conn.close();
                 response.status(404);
-                //return false;
+                return false;
             }
 
-            System.out.println(who_id);
 
             var insert = conn.prepareStatement("insert into follower (\n" +
                     "                who_id, whom_id) values (?, ?)");
@@ -270,13 +267,13 @@ public class WebApplication {
         }
 
         if (Objects.equals(request.requestMethod(), "POST") && !fllws.unfollow.isEmpty()) {
-            System.out.println("post unfollow");
 
-            var who_id = getUserID(db, fllws.unfollow);
+            var whom_id = getUserID(db, fllws.unfollow);
 
-            if (who_id == 0) {
+            if (whom_id == 0) {
+                conn.close();
                 response.status(404);
-                //return false;
+                return false;
             }
 
             var insert = conn.prepareStatement("delete from follower where who_id=? and whom_id=?");
@@ -292,32 +289,25 @@ public class WebApplication {
         }
 
         if (Objects.equals(request.requestMethod(), "GET")) {
-            System.out.println("Get");
 
             var insert = conn.prepareStatement("SELECT user.username FROM user INNER JOIN follower ON follower.whom_id=? WHERE follower.who_id=? LIMIT ?");
 
-            insert.setInt(1, whom_id);
-            //insert.setInt(2, request.session().attribute(request.queryParams("user_id")));
-            insert.setInt(2, 999);
+            insert.setInt(1, request.session().attribute("user_id"));
+            insert.setInt(2, who_id);
             insert.setInt(3, 100);
 
             var rs = insert.executeQuery();
 
+            var follows = new ArrayList<String>();
+            while (rs.next()) {
+                follows.add(rs.getString("username"));
+            }
+
             conn.close();
 
-            System.out.println(rs.next());
-            System.out.println(rs.next());
-
             response.status(200);
-            return true;
+            return follows;
         }
-
-
-
-        System.out.println(request.params());
-
-
-
 
 
         conn.close();
@@ -335,7 +325,7 @@ public class WebApplication {
 
     private class Follows {
         @SerializedName("follows")
-        private List[] follows;
+        private ArrayList[] follows;
     }
 
 
