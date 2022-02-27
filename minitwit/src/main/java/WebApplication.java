@@ -695,7 +695,7 @@ public class WebApplication {
                 );
             }
 
-            response.status(203);
+            response.status(204);
             return "";
         } catch (Exception e) {
             e.printStackTrace();
