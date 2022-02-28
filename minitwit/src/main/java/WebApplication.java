@@ -416,7 +416,7 @@ public class WebApplication {
         Fllws fllws = gson.fromJson(request.body(), Fllws.class);
 
 
-        if (Objects.equals(request.requestMethod(), "POST") && (fllws.follow == null || !fllws.follow.isEmpty())) {
+        if (Objects.equals(request.requestMethod(), "POST") && (fllws.follow != null && !fllws.follow.isEmpty())) {
 
             var whom_id = getUserID(db, fllws.follow);
 
@@ -435,12 +435,12 @@ public class WebApplication {
 
             conn.close();
 
-            response.status(200);
+            response.status(204);
             return "";
 
         }
 
-        if (Objects.equals(request.requestMethod(), "POST") && (fllws.follow == null || !fllws.unfollow.isEmpty())) {
+        if (Objects.equals(request.requestMethod(), "POST") && (fllws.unfollow != null && !fllws.unfollow.isEmpty())) {
 
             var whom_id = getUserID(db, fllws.unfollow);
 
