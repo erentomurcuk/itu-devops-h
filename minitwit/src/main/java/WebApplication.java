@@ -93,7 +93,11 @@ public class WebApplication {
     public static void main(String[] args) {
         System.out.println("Hello Minitwit");
 
-        port(8080);
+        var port = System.getenv("MINITWIT_PORT");
+        if (port == null) {
+            port = "8080";
+        }
+        port(Integer.parseInt(port));
 
         staticFiles.location("/static");
 
