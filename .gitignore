@@ -35,3 +35,7 @@
 .idea/vcs.xml
 .idea/workspace.xml
 *.iml
+./minitwit-legacy/__pycache__/
+./__pycache__
+
+minitwit/target/**

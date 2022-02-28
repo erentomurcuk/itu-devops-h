@@ -1,35 +1,24 @@
 #parse("/templates/layout.vm")
 #@mainLayout()
-  ##{% block title %}
-  #if ($endpoint.equals($urls.PUBLIC_TIMELINE))
-    Public Timeline
-  #elseif ($endpoint.equals($urls.USER_TIMELINE))
-    $profile_user.username's Timeline
-  #else
-    My Timeline
-  #end
-  ##{% endblock %}
-  ##{% block body %}
     <h2>$title</h2>
     #if ($user)
-      #if ($endpoint.equals($urls.USER_TIMELINE))
+      #if ($endpoint.equals($USER_TIMELINE))
         <div class=followstatus>
-        #if($user.userId.equals($profile_user.user_id))
+        #if(${user_id} == $profile_user.user_id)
           This is you!
         #elseif ($followed)
           You are currently following this user.
-          <a class=unfollow href="{{ url_for('unfollow_user', username=profile_user.username)
-            }}">Unfollow user</a>.
+          <a class=unfollow href="${urls.urlFor($UNFOLLOW, { "username": ${profile_user.username} })}">Unfollow user</a>.
         #else
           You are not yet following this user.
-          <a class=follow href="{{ url_for('follow_user', username=profile_user.username)
-            }}">Follow user</a>.
+          <a class=follow href="${urls.urlFor($FOLLOW, { "username": ${profile_user.username} })}"
+          >Follow user</a>.
         #end
         </div>
-      #elseif ($endpoint.equals($urls.TIMELINE))
+      #elseif ($endpoint.equals($USER))
         <div class=twitbox>
-          <h3>What's on your mind $user.username?</h3>
-          <form action="{{ url_for('add_message') }}" method=post>
+          <h3>What's on your mind ${user}?</h3>
+          <form action="${urls.urlFor($ADD_MESSAGE)}" method=post>
             <p><input type=text name=text size=60><!--
             --><input type=submit value="Share">
           </form>
@@ -38,15 +27,16 @@
     #end
     <ul class=messages>
     #foreach( $message in $messages )
-      <li><img src="{{ message.email|gravatar(size=48) }}"><p>
-        <strong><a href="{{ url_for('user_timeline', username=message.username)
-        }}">${message.username}</a></strong>
+      <li><img src="$webapp.getGravatarURL(${message.email})"><p>
+        <strong><a href="/${message.username}">${message.username}</a></strong>
         $message.text
-        <small>&mdash; ${message.pub_date} |datetimeformat</small>
+        <small>
+          &mdash;
+          $date.format('y-MM-dd @ H:mm', ${message.pub_date} * 1000)
+        </small>
       </p></li>
     #else
       <li><em>There's no message so far.</em></li>
     #end
     </ul>
-  ##{% endblock %}
 #end
