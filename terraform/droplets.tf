@@ -42,6 +42,7 @@ resource "digitalocean_droplet" "web" {
       # Doing it this way doesn't work because the volume is attached after
       # running this script
       #"export MINITWIT_DB_PATH=/mnt/minitwit_data/minitwit.db",
+      "export MINITWIT_PORT=80",
       "nohup ./control.sh init-and-start > /tmp/out.log 2>&1 &",
       "ls -al /opt /mnt",
     ]

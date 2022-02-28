@@ -16,6 +16,7 @@ import java.io.StringWriter;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -52,13 +53,11 @@ public class WebApplication {
         public static String urlFor(String url, Map<String, Object> values) throws Exception {
             String u = url;
             for (String key: values.keySet()) {
-                System.out.println(u + " : " + key + " : " + values.get(key));
                 if (values.get(key) instanceof String) {
                     u = u.replace(":" + key, (String) values.get(key));
                 } else if (values.get(key) instanceof Integer) {
                     u = u.replace(":" + key, String.valueOf(values.get(key)));
                 } else {
-                    System.out.println("Cant convert value, lets see what happens now... " + key + " : " + values.get(key));
                     u = u.replace(":" + key, "" + values.get(key));
                 }
             }
@@ -93,7 +92,11 @@ public class WebApplication {
     public static void main(String[] args) {
         System.out.println("Hello Minitwit");
 
-        port(8080);
+        var port = System.getenv("MINITWIT_PORT");
+        if (port == null) {
+            port = "8080";
+        }
+        port(Integer.parseInt(port));
 
         staticFiles.location("/static");
 
@@ -102,6 +105,11 @@ public class WebApplication {
             if (req.session().isNew()) {
                 req.session().attribute("alerts", new ArrayList<>());
             }
+        });
+
+        after("/*", (req, res) -> {
+            // TODO: currently doesn't log query parameters or unusual headers
+            System.out.println(LocalDateTime.now() + " - " + req.uri() + " - " + res.status());
         });
 
         get(URLS.PUBLIC_TIMELINE, WebApplication.servePublicTimelinePage);
