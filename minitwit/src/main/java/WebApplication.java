@@ -1,3 +1,5 @@
+import com.google.gson.GsonBuilder;
+import com.google.gson.annotations.SerializedName;
 import com.google.gson.Gson;
 import com.timgroup.jgravatar.Gravatar;
 import com.timgroup.jgravatar.GravatarDefaultImage;
@@ -14,6 +16,7 @@ import java.io.StringWriter;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -37,6 +40,7 @@ public class WebApplication {
         public static final String ADD_MESSAGE = "/add_message";
         public static final String FOLLOW = "/:username/follow";
         public static final String UNFOLLOW = "/:username/unfollow";
+
 
         /**
          * Transforms a url with :parameters using a map with keys and values
@@ -71,6 +75,7 @@ public class WebApplication {
         public static final String SIM_REGISTER = "/register";
         public static final String SIM_LATEST = "/latest";
         public static final String SIM_MSGS_USR = "/msgs/:username";
+        public static final String SIM_FLLWS = "/fllws/:username";
     }
 
     public static int PER_PAGE = 30;
@@ -112,6 +117,7 @@ public class WebApplication {
         get(URLS.UNFOLLOW, WebApplication.serveUnfollowPage);
         post(URLS.LOGIN, WebApplication.serveLoginPage);
 
+
         // Sim API
         path("/api", () -> {
             // All endpoints in this path must be authenticated
@@ -122,7 +128,10 @@ public class WebApplication {
             get(URLS.SIM_LATEST, WebApplication.serveSimLatest, gson::toJson);
             get(URLS.SIM_MSGS_USR, WebApplication.serveSimMsgsUsr, gson::toJson);
             post(URLS.SIM_MSGS_USR, WebApplication.serveSimMsgsUsr, gson::toJson);
+            post(URLS.SIM_FLLWS, WebApplication.serveSimFllws);
+            get(URLS.SIM_FLLWS, WebApplication.serveSimFllws);
         });
+
     }
 
     public static ResultSet getUser(Connection conn, Integer userId) throws SQLException {
@@ -390,6 +399,125 @@ public class WebApplication {
         return "";
     };
 
+    public static Route serveSimFllws = (Request request, Response response) -> {
+        updateLatest(request);
+
+        var db = new SQLite();
+        var conn = db.getConnection();
+
+        var who_id = getUserID(new SQLite(), request.params(":username"));
+
+        if (who_id == 0) {
+            conn.close();
+            response.status(404);
+            return "";
+        }
+
+        Gson gson = new Gson();
+        Fllws fllws = gson.fromJson(request.body(), Fllws.class);
+
+
+        if (Objects.equals(request.requestMethod(), "POST") && (fllws.follow != null && !fllws.follow.isEmpty())) {
+
+            var whom_id = getUserID(db, fllws.follow);
+
+            if (whom_id == 0) {
+                conn.close();
+                response.status(404);
+                return "";
+            }
+
+
+            var insert = conn.prepareStatement("insert into follower (who_id, whom_id) values (?, ?)");
+
+            insert.setInt(1, who_id);
+            insert.setInt(2, whom_id);
+            insert.execute();
+
+            conn.close();
+
+            response.status(204);
+            return "";
+
+        }
+
+        if (Objects.equals(request.requestMethod(), "POST") && (fllws.unfollow != null && !fllws.unfollow.isEmpty())) {
+
+            var whom_id = getUserID(db, fllws.unfollow);
+
+            if (whom_id == 0) {
+                conn.close();
+                response.status(404);
+                return "";
+            }
+
+            var insert = conn.prepareStatement("delete from follower where who_id=? and whom_id=?");
+
+            insert.setInt(1, who_id);
+            insert.setInt(2, whom_id);
+            insert.execute();
+
+            conn.close();
+
+            response.status(204);
+            return "";
+        }
+
+        if (Objects.equals(request.requestMethod(), "GET")) {
+
+            var insert = conn.prepareStatement("SELECT user.username FROM user INNER JOIN follower ON follower.whom_id=user.user_id WHERE follower.who_id=? LIMIT ?");
+
+            var noFollowers = Integer.parseInt(request.queryParamOrDefault("no", "100"));
+
+            insert.setInt(1, who_id);
+            insert.setInt(2, noFollowers);
+
+            var rs = insert.executeQuery();
+
+
+            var follows = new Follows();
+            follows.follows = new ArrayList<>();
+            while (rs.next()) {
+                follows.follows.add(rs.getString("username"));
+            }
+
+            conn.close();
+
+            var json = "";
+
+            try {
+                json = gson.toJson(follows, Follows.class);
+            } catch (Exception ex) {
+                System.out.println(ex.getMessage());
+            }
+
+            response.status(200);
+            return json;
+        }
+
+
+        conn.close();
+
+        return "";
+    };
+
+    private class Fllws {
+        @SerializedName("follow")
+        private String follow;
+
+        @SerializedName("unfollow")
+        private String unfollow;
+    }
+
+    private static class Follows {
+        @SerializedName("follows")
+        private ArrayList<String> follows;
+    }
+
+
+
+
+
     public static Route servePublicTimelinePage = (Request request, Response response) -> {
         try {
             Map<String, Object> model = new HashMap<>();
@@ -443,8 +571,8 @@ public class WebApplication {
                         "                                    where who_id = ?))\n" +
                         "        order by message.pub_date desc limit ?");
 
-        statement.setInt(1, 1); // TODO: user id
-        statement.setInt(2, 1); // TODO: user id
+        statement.setInt(1, request.session().attribute("user_id"));
+        statement.setInt(2, request.session().attribute("user_id"));
         statement.setInt(3, WebApplication.PER_PAGE);
         ResultSet rs = statement.executeQuery();
 
@@ -757,7 +885,7 @@ public class WebApplication {
                 );
             }
 
-            response.status(203);
+            response.status(204);
             return "";
         } catch (Exception e) {
             e.printStackTrace();
