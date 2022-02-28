@@ -714,6 +714,7 @@ public class WebApplication {
                 return filteredMessages.stream().toList();
             }
         }
+        // Might pose a problem when we POST a message for a user that does not exist (lots of author_id=0 messages) not sure
         else if (request.requestMethod().equals("POST")) {
             var text = request.queryParams("content");
             var time = System.currentTimeMillis() / 1000L;
@@ -727,7 +728,7 @@ public class WebApplication {
             connection.close();
             response.status(204);
         }
-        return null;
+        return 404;
     };
 
     public static Route serveSimRegister = (Request request, Response response) -> {
