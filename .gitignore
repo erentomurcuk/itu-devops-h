@@ -37,3 +37,5 @@
 *.iml
 ./minitwit-legacy/__pycache__/
 ./__pycache__
+
+minitwit/target/**
