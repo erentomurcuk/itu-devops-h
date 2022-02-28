@@ -681,7 +681,6 @@ public class WebApplication {
     //  ---------------------------------------
 
     public static Route serveSimMsgsUsr = (Request request, Response response) -> {
-
         updateLatest(request);
 
         SQLite db = new SQLite();
@@ -694,6 +693,7 @@ public class WebApplication {
             if (userID == 0) {
                 connection.close();
                 response.status(404);
+                return "404 Not Found";
             }
             else {
                 var query = connection.prepareStatement("SELECT message.*, user.* FROM message, user " +
@@ -712,6 +712,7 @@ public class WebApplication {
                     filteredMessages.add(filteredMessage);
                 }
                 connection.close();
+                response.status(200);
                 return filteredMessages.stream().toList();
             }
         }
@@ -729,8 +730,11 @@ public class WebApplication {
             query.execute();
             connection.close();
             response.status(204);
+            return "";
         }
-        return 404;
+        connection.close();
+        response.status(404);
+        return "404 Not Found";
     };
 
     public static Route serveSimRegister = (Request request, Response response) -> {
