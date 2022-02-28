@@ -1,3 +1,4 @@
+import com.google.gson.GsonBuilder;
 import com.google.gson.annotations.SerializedName;
 import com.google.gson.Gson;
 import com.timgroup.jgravatar.Gravatar;
@@ -398,7 +399,7 @@ public class WebApplication {
 
     public static Route serveSimFllws = (Request request, Response response) -> {
 
-        //update_latest(request); //TODO: call
+        updateLatest(request); //TODO: call
 
         var db = new SQLite();
         var conn = db.getConnection();
@@ -472,15 +473,25 @@ public class WebApplication {
 
             var rs = insert.executeQuery();
 
-            var follows = new ArrayList<String>();
+
+            var follows = new Follows();
+            follows.follows = new ArrayList<>();
             while (rs.next()) {
-                follows.add(rs.getString("username"));
+                follows.follows.add(rs.getString("username"));
             }
 
             conn.close();
 
+            var json = "";
+
+            try {
+                json = gson.toJson(follows, Follows.class);
+            } catch (Exception ex) {
+                System.out.println(ex.getMessage());
+            }
+
             response.status(200);
-            return follows;
+            return json;
         }
 
 
@@ -497,9 +508,9 @@ public class WebApplication {
         private String unfollow;
     }
 
-    private class Follows {
+    private static class Follows {
         @SerializedName("follows")
-        private ArrayList[] follows;
+        private ArrayList<String> follows;
     }
 
 
