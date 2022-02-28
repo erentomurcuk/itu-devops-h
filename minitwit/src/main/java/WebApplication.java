@@ -115,12 +115,13 @@ public class WebApplication {
         // Sim API
         path("/api", () -> {
             // All endpoints in this path must be authenticated
-            //before("/*", protectEndpoint);
+            before("/*", protectEndpoint);
 
             get(URLS.SIM_MESSAGES, WebApplication.serveSimMsgs, gson::toJson);
             post(URLS.SIM_REGISTER, WebApplication.serveSimRegister); // Handles JSON on its own
             get(URLS.SIM_LATEST, WebApplication.serveSimLatest, gson::toJson);
             get(URLS.SIM_MSGS_USR, WebApplication.serveSimMsgsUsr, gson::toJson);
+            post(URLS.SIM_MSGS_USR, WebApplication.serveSimMsgsUsr, gson::toJson);
         });
     }
 
@@ -691,7 +692,7 @@ public class WebApplication {
 
         if (request.requestMethod().equals("GET")){
             if (userID == 0) {
-                halt(404, "404: Could not find user!"); //How do we treat 404?
+                response.status(404);
             }
             else {
                 var query = connection.prepareStatement("SELECT message.*, user.* FROM message, user " +
@@ -709,6 +710,7 @@ public class WebApplication {
                     filteredMessage.put("user", messages.getString("username"));
                     filteredMessages.add(filteredMessage);
                 }
+                connection.close();
                 return filteredMessages.stream().toList();
             }
         }
@@ -723,9 +725,9 @@ public class WebApplication {
 
             query.execute();
             connection.close();
-            return "204";
+            response.status(204);
         }
-        return null ;
+        return null;
     };
 
     public static Route serveSimRegister = (Request request, Response response) -> {
