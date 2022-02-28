@@ -692,6 +692,7 @@ public class WebApplication {
 
         if (request.requestMethod().equals("GET")){
             if (userID == 0) {
+                connection.close();
                 response.status(404);
             }
             else {
@@ -716,12 +717,13 @@ public class WebApplication {
         }
         // Might pose a problem when we POST a message for a user that does not exist (lots of author_id=0 messages) not sure
         else if (request.requestMethod().equals("POST")) {
-            var text = request.queryParams("content");
+            var requestData = gson.fromJson(request.body(), HashMap.class);
             var time = System.currentTimeMillis() / 1000L;
+            var text = requestData.get("content");
 
             var query = connection.prepareStatement("INSERT INTO message (author_id, text, pub_date, flagged) VALUES (?, ?, ?, 0)");
             query.setInt(1, userID);
-            query.setString(2, text);
+            query.setString(2, text.toString());
             query.setLong(3, time);
 
             query.execute();
