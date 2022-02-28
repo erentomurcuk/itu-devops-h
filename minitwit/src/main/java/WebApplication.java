@@ -490,7 +490,7 @@ public class WebApplication {
                 System.out.println(ex.getMessage());
             }
 
-            response.status(200);
+            response.status(204);
             return json;
         }
 
