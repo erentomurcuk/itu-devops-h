@@ -74,8 +74,8 @@ public class WebApplication {
         public static final String SIM_MESSAGES = "/msgs";
         public static final String SIM_REGISTER = "/register";
         public static final String SIM_LATEST = "/latest";
+        public static final String SIM_MSGS_USR = "/msgs/:username";
         public static final String SIM_FLLWS = "/fllws/:username";
-
     }
 
     public static int PER_PAGE = 30;
@@ -108,13 +108,13 @@ public class WebApplication {
         get(URLS.REGISTER, WebApplication.serveRegisterPage);
         get(URLS.LOGIN, WebApplication.serveLoginPage);
         get(URLS.LOGOUT, WebApplication.handleLogoutRequest);
+        get(URLS.USER, WebApplication.serveUserTimelinePage);
+        get(URLS.USER_TIMELINE, WebApplication.serveUserByUsernameTimelinePage);
 
         post(URLS.REGISTER, WebApplication.serveRegisterPage);
         post(URLS.ADD_MESSAGE, WebApplication.add_message);
         get(URLS.FOLLOW, WebApplication.serveFollowPage);
         get(URLS.UNFOLLOW, WebApplication.serveUnfollowPage);
-        get(URLS.USER, WebApplication.serveUserTimelinePage);
-        get(URLS.USER_TIMELINE, WebApplication.serveUserByUsernameTimelinePage);
         post(URLS.LOGIN, WebApplication.serveLoginPage);
 
 
@@ -126,6 +126,8 @@ public class WebApplication {
             get(URLS.SIM_MESSAGES, WebApplication.serveSimMsgs, gson::toJson);
             post(URLS.SIM_REGISTER, WebApplication.serveSimRegister); // Handles JSON on its own
             get(URLS.SIM_LATEST, WebApplication.serveSimLatest, gson::toJson);
+            get(URLS.SIM_MSGS_USR, WebApplication.serveSimMsgsUsr, gson::toJson);
+            post(URLS.SIM_MSGS_USR, WebApplication.serveSimMsgsUsr, gson::toJson);
             post(URLS.SIM_FLLWS, WebApplication.serveSimFllws);
             get(URLS.SIM_FLLWS, WebApplication.serveSimFllws);
         });
@@ -794,14 +796,73 @@ public class WebApplication {
         updateLatest(request);
 
         var messages = getMessages();
-        var filteredMessages = messages.stream().map((message) -> {
-            return Map.ofEntries(
-                    Map.entry("content", message.get("text")),
-                    Map.entry("pub_date", message.get("pub_date")),
-                    Map.entry("user", message.get("username"))
-            );
-        });
+        var filteredMessages = messages.stream().map((message) -> Map.ofEntries(
+               Map.entry("content", message.get("text")),
+               Map.entry("pub_date", message.get("pub_date")),
+               Map.entry("user", message.get("username"))
+       ));
         return filteredMessages.toList();
+    };
+
+    //  --------------------------------------
+    //              Simulator API
+    //  ---------------------------------------
+
+    public static Route serveSimMsgsUsr = (Request request, Response response) -> {
+        updateLatest(request);
+
+        SQLite db = new SQLite();
+        var connection = db.getConnection();
+        var userID = getUserID(db, request.params(":username"));
+
+        int noMsgs =  Integer.parseInt(request.queryParamOrDefault("no", "100"));
+
+        if (request.requestMethod().equals("GET")){
+            if (userID == 0) {
+                connection.close();
+                response.status(404);
+                return "404 Not Found";
+            }
+            else {
+                var query = connection.prepareStatement("SELECT message.*, user.* FROM message, user " +
+                        "                   WHERE message.flagged = 0 AND" +
+                        "                   user.user_id = message.author_id AND user.user_id = ?" +
+                        "                   ORDER BY message.pub_date DESC LIMIT ?" );
+                query.setInt(1, userID);
+                query.setInt(2, noMsgs);
+                var messages = query.executeQuery();
+                var filteredMessages = new ArrayList<Map>();
+                while(messages.next()) {
+                    var filteredMessage = new HashMap();
+                    filteredMessage.put("content", messages.getString("text"));
+                    filteredMessage.put("pub_date", messages.getInt("pub_date"));
+                    filteredMessage.put("user", messages.getString("username"));
+                    filteredMessages.add(filteredMessage);
+                }
+                connection.close();
+                response.status(200);
+                return filteredMessages.stream().toList();
+            }
+        }
+        // Might pose a problem when we POST a message for a user that does not exist (lots of author_id=0 messages) not sure
+        else if (request.requestMethod().equals("POST")) {
+            var requestData = gson.fromJson(request.body(), HashMap.class);
+            var time = System.currentTimeMillis() / 1000L;
+            var text = requestData.get("content");
+
+            var query = connection.prepareStatement("INSERT INTO message (author_id, text, pub_date, flagged) VALUES (?, ?, ?, 0)");
+            query.setInt(1, userID);
+            query.setString(2, text.toString());
+            query.setLong(3, time);
+
+            query.execute();
+            connection.close();
+            response.status(204);
+            return "";
+        }
+        connection.close();
+        response.status(404);
+        return "404 Not Found";
     };
 
     public static Route serveSimRegister = (Request request, Response response) -> {
