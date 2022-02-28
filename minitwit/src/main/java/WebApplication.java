@@ -398,8 +398,7 @@ public class WebApplication {
     };
 
     public static Route serveSimFllws = (Request request, Response response) -> {
-
-        updateLatest(request); //TODO: call
+        updateLatest(request);
 
         var db = new SQLite();
         var conn = db.getConnection();
@@ -490,7 +489,7 @@ public class WebApplication {
                 System.out.println(ex.getMessage());
             }
 
-            response.status(204);
+            response.status(200);
             return json;
         }
 
