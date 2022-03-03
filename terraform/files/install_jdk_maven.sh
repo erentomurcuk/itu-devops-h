@@ -8,8 +8,8 @@ echo "Updating..."
 apt-get update
 
 echo "Installing openjdk-17-jdk and openjdk-17-jre"
-until apt-get install -y "openjdk-17-jre:amd64=17.*"; do sleep 1; done
-until apt-get install -y "openjdk-17-jdk:amd64=17.*"; do sleep 1; done
+until apt-get install -y "openjdk-17-jre"; do sleep 1; done
+until apt-get install -y "openjdk-17-jdk"; do sleep 1; done
 
 echo "Installing "
 # Note: default download server (dlcdn.apache.org) returns 503 to Digital Ocean IPs at the moment
