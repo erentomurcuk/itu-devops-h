@@ -19,5 +19,6 @@ echo "Unpacking maven"
 tar zxvf /tmp/maven.tar.gz -C /opt
 echo "Adding maven bin path to PATH"
 export PATH=$PATH:/opt/apache-maven-3.8.4/bin
+echo "export PATH=$PATH:/opt/apache-maven-3.8.4/bin" > ~/.profile
 mvn --version
 ls /opt/apache-maven-3.8.4/bin
