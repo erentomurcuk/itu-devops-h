@@ -5,7 +5,8 @@
 # Must run as root.
 
 echo "Updating..."
-apt-get update && apt-get upgrade -y
+apt-get update
+apt-get upgrade -y
 
 echo "Installing openjdk-17-jdk and openjdk-17-jre"
 until apt-get install -y "openjdk-17-jre"; do sleep 10; done
