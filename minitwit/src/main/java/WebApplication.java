@@ -1,4 +1,3 @@
-import com.google.gson.GsonBuilder;
 import com.google.gson.annotations.SerializedName;
 import com.google.gson.Gson;
 import com.timgroup.jgravatar.Gravatar;
@@ -112,18 +111,18 @@ public class WebApplication {
             System.out.println(LocalDateTime.now() + " - " + req.uri() + " - " + res.status());
         });
 
-        get(URLS.PUBLIC_TIMELINE, WebApplication.servePublicTimelinePage);
-        get(URLS.REGISTER, WebApplication.serveRegisterPage);
-        get(URLS.LOGIN, WebApplication.serveLoginPage);
-        get(URLS.LOGOUT, WebApplication.handleLogoutRequest);
-        get(URLS.USER, WebApplication.serveUserTimelinePage);
-        get(URLS.USER_TIMELINE, WebApplication.serveUserByUsernameTimelinePage);
+        get(URLS.PUBLIC_TIMELINE, catchRoute(WebApplication.servePublicTimelinePage));
+        get(URLS.REGISTER, catchRoute(WebApplication.serveRegisterPage));
+        get(URLS.LOGIN, catchRoute(WebApplication.serveLoginPage));
+        get(URLS.LOGOUT, catchRoute(WebApplication.handleLogoutRequest));
+        get(URLS.USER, catchRoute(WebApplication.serveUserTimelinePage));
+        get(URLS.USER_TIMELINE, catchRoute(WebApplication.serveUserByUsernameTimelinePage));
 
-        post(URLS.REGISTER, WebApplication.serveRegisterPage);
-        post(URLS.ADD_MESSAGE, WebApplication.add_message);
-        get(URLS.FOLLOW, WebApplication.serveFollowPage);
-        get(URLS.UNFOLLOW, WebApplication.serveUnfollowPage);
-        post(URLS.LOGIN, WebApplication.serveLoginPage);
+        post(URLS.REGISTER, catchRoute(WebApplication.serveRegisterPage));
+        post(URLS.ADD_MESSAGE, catchRoute(WebApplication.add_message));
+        get(URLS.FOLLOW, catchRoute(WebApplication.serveFollowPage));
+        get(URLS.UNFOLLOW, catchRoute(WebApplication.serveUnfollowPage));
+        post(URLS.LOGIN, catchRoute(WebApplication.serveLoginPage));
 
 
         // Sim API
@@ -131,15 +130,28 @@ public class WebApplication {
             // All endpoints in this path must be authenticated
             before("/*", protectEndpoint);
 
-            get(URLS.SIM_MESSAGES, WebApplication.serveSimMsgs, gson::toJson);
-            post(URLS.SIM_REGISTER, WebApplication.serveSimRegister); // Handles JSON on its own
-            get(URLS.SIM_LATEST, WebApplication.serveSimLatest, gson::toJson);
-            get(URLS.SIM_MSGS_USR, WebApplication.serveSimMsgsUsr, gson::toJson);
-            post(URLS.SIM_MSGS_USR, WebApplication.serveSimMsgsUsr, gson::toJson);
-            post(URLS.SIM_FLLWS, WebApplication.serveSimFllws);
-            get(URLS.SIM_FLLWS, WebApplication.serveSimFllws);
+            get(URLS.SIM_MESSAGES, catchRoute(WebApplication.serveSimMsgs), gson::toJson);
+            post(URLS.SIM_REGISTER, catchRoute(WebApplication.serveSimRegister)); // Handles JSON on its own
+            get(URLS.SIM_LATEST, catchRoute(WebApplication.serveSimLatest), gson::toJson);
+            get(URLS.SIM_MSGS_USR, catchRoute(WebApplication.serveSimMsgsUsr), gson::toJson);
+            post(URLS.SIM_MSGS_USR, catchRoute(WebApplication.serveSimMsgsUsr), gson::toJson);
+            post(URLS.SIM_FLLWS, catchRoute(WebApplication.serveSimFllws));
+            get(URLS.SIM_FLLWS, catchRoute(WebApplication.serveSimFllws));
         });
 
+    }
+
+    public static Route catchRoute(Route r) {
+        Route catcher = (Request request, Response response) -> {
+            try {
+                return r.handle(request, response);
+            } catch (Exception e) {
+                e.printStackTrace();
+                return e.toString();
+            }
+        };
+
+        return catcher;
     }
 
     public static ResultSet getUser(Connection conn, Integer userId) throws SQLException {
@@ -200,51 +212,44 @@ public class WebApplication {
     }
 
     public static String render(Session session, Map<String, Object> model, String templatePath) {
-        try {
-            VelocityEngine engine = new VelocityEngine();
-            // Required for Velocity to know where resources ends up
-            engine.setProperty("resource.loader", "class");
-            engine.setProperty("class.resource.loader.class","org.apache.velocity.runtime.resource.loader.ClasspathResourceLoader");
+        VelocityEngine engine = new VelocityEngine();
+        // Required for Velocity to know where resources ends up
+        engine.setProperty("resource.loader", "class");
+        engine.setProperty("class.resource.loader.class","org.apache.velocity.runtime.resource.loader.ClasspathResourceLoader");
 
-            engine.init();
+        engine.init();
 
-            Template template = engine.getTemplate(templatePath);
+        Template template = engine.getTemplate(templatePath);
 
-            // Set up variables available in templates
-            VelocityContext ctx = new VelocityContext(model);
-            ctx.put("webapp", WebApplication.class);
-            ctx.put("urls", WebApplication.URLS.class);     //I think this is redundant no?
-            //This is the easiest way I could insert constants into the context. Maybe not elegant, but it works.
-            ctx.put("USER", URLS.USER);
-            ctx.put("LOGIN", URLS.LOGIN);
-            ctx.put("LOGOUT", URLS.LOGOUT);
-            ctx.put("PUBLIC_TIMELINE", URLS.PUBLIC_TIMELINE);
-            ctx.put("USER_TIMELINE", URLS.USER_TIMELINE);
-            ctx.put("REGISTER",URLS.REGISTER);
-            ctx.put("ADD_MESSAGE", URLS.ADD_MESSAGE);
-            ctx.put("FOLLOW",URLS.FOLLOW);
-            ctx.put("UNFOLLOW", URLS.UNFOLLOW);
-            model.forEach((k, v) -> ctx.put(k, v));         //I think this might also be redundant
+        // Set up variables available in templates
+        VelocityContext ctx = new VelocityContext(model);
+        ctx.put("webapp", WebApplication.class);
+        ctx.put("urls", WebApplication.URLS.class);     //I think this is redundant no?
+        //This is the easiest way I could insert constants into the context. Maybe not elegant, but it works.
+        ctx.put("USER", URLS.USER);
+        ctx.put("LOGIN", URLS.LOGIN);
+        ctx.put("LOGOUT", URLS.LOGOUT);
+        ctx.put("PUBLIC_TIMELINE", URLS.PUBLIC_TIMELINE);
+        ctx.put("USER_TIMELINE", URLS.USER_TIMELINE);
+        ctx.put("REGISTER",URLS.REGISTER);
+        ctx.put("ADD_MESSAGE", URLS.ADD_MESSAGE);
+        ctx.put("FOLLOW",URLS.FOLLOW);
+        ctx.put("UNFOLLOW", URLS.UNFOLLOW);
+        model.forEach((k, v) -> ctx.put(k, v));         //I think this might also be redundant
 
-            ctx.put("date", new DateTool());
+        ctx.put("date", new DateTool());
 
-            ctx.put("alerts", session.attribute("alerts"));
+        ctx.put("alerts", session.attribute("alerts"));
 
-            if (!ctx.containsKey("title")) {
-                ctx.put("title", "Welcome");
-            }
-
-            // "Run" template and return result
-            StringWriter writer = new StringWriter();
-            template.merge(ctx, writer);
-            return writer.toString();
-        } catch (Exception e) {
-            // If a error happens above, print it and return it as a response
-            e.printStackTrace();
-            return e.toString();
-        } finally {
-            ((List<String>) session.attribute("alerts")).clear();
+        if (!ctx.containsKey("title")) {
+            ctx.put("title", "Welcome");
         }
+
+        // "Run" template and return result
+        StringWriter writer = new StringWriter();
+        template.merge(ctx, writer);
+        ((List<String>) session.attribute("alerts")).clear();
+        return writer.toString();
     }
 
     private static void addAlert(Session session, String message) {
@@ -305,35 +310,27 @@ public class WebApplication {
     public static Route add_message = (Request request, Response response)  -> {
         Map<String, Object> model = new HashMap<>();
 
-        try {
-            if (request.session().attribute("user_id") == null) {
-                response.status(401);
-                return "Unauthorised";
-            }
-
-            var db = new SQLite();
-            var conn = db.getConnection();
-
-            var insert = conn.prepareStatement(
-                "insert into message (author_id, text, pub_date, flagged)\n" +
-                    "            values (?, ?, ?, 0)");
-
-            long unixTime = System.currentTimeMillis() / 1000L;
-
-            insert.setInt(1, request.session().attribute("user_id"));
-            insert.setString(2, request.queryParams("text"));
-            insert.setLong(3, unixTime);
-
-            insert.execute();
-
-            conn.close();
+        if (request.session().attribute("user_id") == null) {
+            response.status(401);
+            return "Unauthorised";
         }
 
-        catch (Exception e) {
-            e.printStackTrace();
-            return e.toString();
+        var db = new SQLite();
+        var conn = db.getConnection();
 
-        }
+        var insert = conn.prepareStatement(
+            "insert into message (author_id, text, pub_date, flagged)\n" +
+                "            values (?, ?, ?, 0)");
+
+        long unixTime = System.currentTimeMillis() / 1000L;
+
+        insert.setInt(1, request.session().attribute("user_id"));
+        insert.setString(2, request.queryParams("text"));
+        insert.setLong(3, unixTime);
+
+        insert.execute();
+
+        conn.close();
 
         addAlert(request.session(), "Your message was recorded");
 
@@ -345,42 +342,36 @@ public class WebApplication {
     public static Route serveFollowPage = (Request request, Response response) -> {
         var db = new SQLite();
         var conn = db.getConnection();
-        try {
 
-            var insert = conn.prepareStatement("insert into follower (\n" +
-                    "                who_id, whom_id) values (?, ?)");
+        var insert = conn.prepareStatement("insert into follower (\n" +
+                "                who_id, whom_id) values (?, ?)");
 
-            Integer currentUserID = request.session().attribute("user_id");
-            if (currentUserID == null) {
-                response.status(401);
-                return "";
-            }
-
-            var whom_id = getUserID(db, request.params(":username"));
-
-            if (whom_id == 0) {
-                response.status(404);
-                return "";
-            }
-
-            insert.setInt(1, currentUserID);
-            insert.setInt(2, whom_id);
-            insert.execute();
-
-            conn.close();
-
-            response.redirect(URLS.urlFor(URLS.USER_TIMELINE, Map.ofEntries(
-                    Map.entry("username", request.params(":username"))
-            )));
-
-            addAlert(request.session(), "You are now following " + request.params(":username"));
-
+        Integer currentUserID = request.session().attribute("user_id");
+        if (currentUserID == null) {
+            response.status(401);
             return "";
-        } catch (Exception e) {
-            conn.close();
-            e.printStackTrace();
-            return e.toString();
         }
+
+        var whom_id = getUserID(db, request.params(":username"));
+
+        if (whom_id == 0) {
+            response.status(404);
+            return "";
+        }
+
+        insert.setInt(1, currentUserID);
+        insert.setInt(2, whom_id);
+        insert.execute();
+
+        conn.close();
+
+        response.redirect(URLS.urlFor(URLS.USER_TIMELINE, Map.ofEntries(
+                Map.entry("username", request.params(":username"))
+        )));
+
+        addAlert(request.session(), "You are now following " + request.params(":username"));
+
+        return "";
     };
 
     public static Route serveUnfollowPage = (Request request, Response response) -> {
@@ -527,30 +518,25 @@ public class WebApplication {
 
 
     public static Route servePublicTimelinePage = (Request request, Response response) -> {
-        try {
-            Map<String, Object> model = new HashMap<>();
+        Map<String, Object> model = new HashMap<>();
 
-            var db = new SQLite();
-            var conn = db.getConnection();
+        var db = new SQLite();
+        var conn = db.getConnection();
 
-            var userID = (Integer) request.session().attribute("user_id");
-            var loggedInUser = getUser(conn, (userID));
-            if (loggedInUser != null) model.put("user", loggedInUser.getString("username"));
+        var userID = (Integer) request.session().attribute("user_id");
+        var loggedInUser = getUser(conn, (userID));
+        if (loggedInUser != null) model.put("user", loggedInUser.getString("username"));
 
-            // Where does this come from in python?
-            model.put("title", "Public Timeline");
-            model.put("login", URLS.LOGIN);
+        // Where does this come from in python?
+        model.put("title", "Public Timeline");
+        model.put("login", URLS.LOGIN);
 
-            var messages = getMessages();
-            model.put("messages", messages);
+        var messages = getMessages();
+        model.put("messages", messages);
 
-            conn.close();
+        conn.close();
 
-            return WebApplication.render(request.session(), model, WebApplication.Templates.PUBLIC_TIMELINE);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return e.toString();
-        }
+        return WebApplication.render(request.session(), model, WebApplication.Templates.PUBLIC_TIMELINE);
     };
 
     public static Route serveUserTimelinePage = (Request request, Response response) -> {
@@ -605,127 +591,117 @@ public class WebApplication {
     };
 
     public static Route serveUserByUsernameTimelinePage = (Request request, Response response) -> {
-        try {
-            Map<String, Object> model = new HashMap<>();
+        Map<String, Object> model = new HashMap<>();
 
-            var db = new SQLite();
-            var conn = db.getConnection();
+        var db = new SQLite();
+        var conn = db.getConnection();
 
-            var userID = (Integer) request.session().attribute("user_id");
-            var loggedInUser = getUser(conn, (userID));
-            if (loggedInUser != null) {
-                model.put("user", loggedInUser.getString("username"));
-                model.put("user_id", loggedInUser.getInt("user_id"));
-            }
+        var userID = (Integer) request.session().attribute("user_id");
+        var loggedInUser = getUser(conn, (userID));
+        if (loggedInUser != null) {
+            model.put("user", loggedInUser.getString("username"));
+            model.put("user_id", loggedInUser.getInt("user_id"));
+        }
 
-            model.put("endpoint", URLS.USER_TIMELINE);
+        model.put("endpoint", URLS.USER_TIMELINE);
 
-            var profileStmt = conn.prepareStatement(
-                    "select * from user where username = ?"
-            );
-            profileStmt.setString(1, request.params(":username"));
-            var profileRs = profileStmt.executeQuery();
-            if (profileRs.isClosed()) {
-                response.status(404);
-                conn.close();
-                return "404"; // TODO: What does the old one do?
-            }
-            var profileUser = new HashMap<String, Object>();
-            profileUser.put("user_id", profileRs.getInt("user_id"));
-            profileUser.put("username", profileRs.getString("username"));
-            profileUser.put("email", profileRs.getString("email"));
-            model.put("profile_user", profileUser);
-            profileRs.close();
+        var profileStmt = conn.prepareStatement(
+                "select * from user where username = ?"
+        );
+        profileStmt.setString(1, request.params(":username"));
+        var profileRs = profileStmt.executeQuery();
+        if (profileRs.isClosed()) {
+            response.status(404);
+            conn.close();
+            return "404"; // TODO: What does the old one do?
+        }
+        var profileUser = new HashMap<String, Object>();
+        profileUser.put("user_id", profileRs.getInt("user_id"));
+        profileUser.put("username", profileRs.getString("username"));
+        profileUser.put("email", profileRs.getString("email"));
+        model.put("profile_user", profileUser);
+        profileRs.close();
 
-            model.put("title", profileUser.get("username") + "'s Timeline");
+        model.put("title", profileUser.get("username") + "'s Timeline");
 
-            if (userID != null) {
-                var followedStmt = conn.prepareStatement("select 1 from follower where\n" +
-                        "follower.who_id = ? and follower.whom_id = ?");
-                followedStmt.setInt(1, userID);
-                followedStmt.setInt(2, (Integer) profileUser.get("user_id"));
-                var followedRs = followedStmt.executeQuery();
-                if (!followedRs.isClosed()) {
-                    model.put("followed", true);
-                } else {
-                    model.put("followed", false);
-                }
+        if (userID != null) {
+            var followedStmt = conn.prepareStatement("select 1 from follower where\n" +
+                    "follower.who_id = ? and follower.whom_id = ?");
+            followedStmt.setInt(1, userID);
+            followedStmt.setInt(2, (Integer) profileUser.get("user_id"));
+            var followedRs = followedStmt.executeQuery();
+            if (!followedRs.isClosed()) {
+                model.put("followed", true);
             } else {
                 model.put("followed", false);
             }
-
-            var messageStmt = conn.prepareStatement(
-                    "select message.*, user.* from message, user where\n" +
-                            "            user.user_id = message.author_id and user.user_id = ?\n" +
-                            "            order by message.pub_date desc limit ?");
-            messageStmt.setInt(1, (int) profileUser.get("user_id"));
-            messageStmt.setInt(2, PER_PAGE);
-            var messages = new ArrayList<HashMap<String, Object>>();
-            var messageRs = messageStmt.executeQuery();
-            while (messageRs.next()) {
-                HashMap<String, Object> result = new HashMap<>();
-                result.put("message_id", messageRs.getInt("message_id"));
-                result.put("author_id", messageRs.getInt("author_id"));
-                result.put("text", messageRs.getString("text"));
-                result.put("pub_date", messageRs.getString("pub_date")); // Type?
-                result.put("flagged", messageRs.getInt("flagged"));
-                result.put("username", messageRs.getString("username"));
-                result.put("email", messageRs.getString("email"));
-                messages.add(result);
-            }
-            model.put("messages", messages);
-
-            conn.close();
-
-            return WebApplication.render(request.session(), model, WebApplication.Templates.PUBLIC_TIMELINE);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return e.toString();
+        } else {
+            model.put("followed", false);
         }
+
+        var messageStmt = conn.prepareStatement(
+                "select message.*, user.* from message, user where\n" +
+                        "            user.user_id = message.author_id and user.user_id = ?\n" +
+                        "            order by message.pub_date desc limit ?");
+        messageStmt.setInt(1, (int) profileUser.get("user_id"));
+        messageStmt.setInt(2, PER_PAGE);
+        var messages = new ArrayList<HashMap<String, Object>>();
+        var messageRs = messageStmt.executeQuery();
+        while (messageRs.next()) {
+            HashMap<String, Object> result = new HashMap<>();
+            result.put("message_id", messageRs.getInt("message_id"));
+            result.put("author_id", messageRs.getInt("author_id"));
+            result.put("text", messageRs.getString("text"));
+            result.put("pub_date", messageRs.getString("pub_date")); // Type?
+            result.put("flagged", messageRs.getInt("flagged"));
+            result.put("username", messageRs.getString("username"));
+            result.put("email", messageRs.getString("email"));
+            messages.add(result);
+        }
+        model.put("messages", messages);
+
+        conn.close();
+
+        return WebApplication.render(request.session(), model, WebApplication.Templates.PUBLIC_TIMELINE);
     };
 
     public static Route serveRegisterPage = (Request request, Response response) -> {
         Map<String, Object> model = new HashMap<>();
-        try {
 
-            var db = new SQLite();
-            var conn = db.getConnection();
-            var insert = conn.prepareStatement("insert into user (\n" +
-                    "username, email, pw_hash) values (?, ?, ?)");
+        var db = new SQLite();
+        var conn = db.getConnection();
+        var insert = conn.prepareStatement("insert into user (\n" +
+                "username, email, pw_hash) values (?, ?, ?)");
 
-            // TODO: Get logged in user (if any)
-            // if (userIsLoggedIn) {
-            //     response.redirect(URLS.LOGIN);
-            //     return;
-            // }
+        // TODO: Get logged in user (if any)
+        // if (userIsLoggedIn) {
+        //     response.redirect(URLS.LOGIN);
+        //     return;
+        // }
 
-            model.put("messages", new ArrayList<String>() {});
-            model.put("username", request.queryParams("username") == null ? "" : request.queryParams("username"));
-            model.put("email", request.queryParams("email") == null ? "" : request.queryParams("email"));
-            model.put("title", "Sign Up");
+        model.put("messages", new ArrayList<String>() {});
+        model.put("username", request.queryParams("username") == null ? "" : request.queryParams("username"));
+        model.put("email", request.queryParams("email") == null ? "" : request.queryParams("email"));
+        model.put("title", "Sign Up");
 
-            if (request.requestMethod().equals("POST")) {
-                var username = request.queryParams("username");
-                var email = request.queryParams("email");
-                var password = request.queryParams("password");
-                var password2 = request.queryParams("password2");
+        if (request.requestMethod().equals("POST")) {
+            var username = request.queryParams("username");
+            var email = request.queryParams("email");
+            var password = request.queryParams("password");
+            var password2 = request.queryParams("password2");
 
-                var error = register(username, email, password, password2);
-                if (error != null) {
-                    model.put("error", error);
-                } else {
-                    addAlert(request.session(), "You were successfully registered and can log in now");
+            var error = register(username, email, password, password2);
+            if (error != null) {
+                model.put("error", error);
+            } else {
+                addAlert(request.session(), "You were successfully registered and can log in now");
 
-                    response.redirect(URLS.LOGIN);
+                response.redirect(URLS.LOGIN);
 
-                    // No need to render due to redirect
-                    // Rendering would clear the alerts too early
-                    return null;
-                }
+                // No need to render due to redirect
+                // Rendering would clear the alerts too early
+                return null;
             }
-        } catch (Exception e) {
-            e.printStackTrace();
-            return e.toString();
         }
 
         return WebApplication.render(request.session(), model, WebApplication.Templates.REGISTER);
@@ -874,31 +850,26 @@ public class WebApplication {
     };
 
     public static Route serveSimRegister = (Request request, Response response) -> {
-        try {
-            updateLatest(request);
+        updateLatest(request);
 
-            var json = gson.fromJson(request.body(), HashMap.class);
-            var username = String.valueOf(json.get("username"));
-            var email = String.valueOf(json.get("email"));
-            var password = String.valueOf(json.get("pwd"));
+        var json = gson.fromJson(request.body(), HashMap.class);
+        var username = String.valueOf(json.get("username"));
+        var email = String.valueOf(json.get("email"));
+        var password = String.valueOf(json.get("pwd"));
 
-            var error = register(username, email, password, password);
-            if (error != null) {
-                response.status(400);
-                return gson.toJson(
-                        Map.ofEntries(
-                                Map.entry("status", 400),
-                                Map.entry("error_msg", error)
-                        )
-                );
-            }
-
-            response.status(204);
-            return "";
-        } catch (Exception e) {
-            e.printStackTrace();
-            return e.toString();
+        var error = register(username, email, password, password);
+        if (error != null) {
+            response.status(400);
+            return gson.toJson(
+                    Map.ofEntries(
+                            Map.entry("status", 400),
+                            Map.entry("error_msg", error)
+                    )
+            );
         }
+
+        response.status(204);
+        return "";
     };
 
     public static Route serveSimLatest = (Request request, Response response) -> {
