@@ -13,4 +13,9 @@ server:
 steps:
 - name: testing
   commands:
-  - echo "Hello world!"
+  - chmod +x ./terraform/files/install_jdk_maven.sh
+  - ./terraform/files/install_jdk_maven.sh
+  - cd minitwit
+  - chmod +x ./configure.sh
+  - ./configure.sh build
+  - ls -al
