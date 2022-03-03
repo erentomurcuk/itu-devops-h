@@ -146,6 +146,7 @@ public class WebApplication {
             try {
                 return r.handle(request, response);
             } catch (Exception e) {
+                response.status(500);
                 e.printStackTrace();
                 return e.toString();
             }
