@@ -33,7 +33,7 @@ chmod +x /usr/local/bin/docker-compose
 # If entropy is low causing docker-compose up to hang, this package can fix it
 # https://stackoverflow.com/questions/59941911/docker-compose-up-hangs-forever-how-to-debug
 echo "Installing haveged"
-apt install haveged
+apt install haveged -y
 
 # Cleanup
 echo "Removing installation files"
