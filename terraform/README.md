@@ -29,26 +29,26 @@ To only recreate some parts of the infrastructure, "taint" them with ex. `terraf
 * Sign in on the server and create a `.env` file in the root folder with the following values:
 
    ```
-DRONE_GITHUB_CLIENT_ID= # Client ID from github
-DRONE_GITHUB_CLIENT_SECRET= # Client secret from github
-
-DRONE_RPC_SECRET= # Some secret string for internal communication
-
-DRONE_SERVER_HOST=159.223.9.94 # External ip
-DRONE_SERVER_PROTO=http # http or https
-
-DRONE_USER_FILTER=erentomurcuk,Herover,KnittedSox,pizzaluc,smilladion # Github users allowed to sign in
-
-DRONE_DATABASE_SECRET= # Database encryption secret for secrets
-
-DRONE_PRIVATE_KEY_FILE="/root/id_rsa" # Location of private ssh key inside drone server
-DRONE_PUBLIC_KEY_FILE="/root/id_rsa.pub" # Location of public ssh key
-
-DRONE_RPC_PROTO=http # Protocol for drone-pipeline-to-drone-runner
-DRONE_RPC_HOST=159.223.9.94 # IP of drone pipeline server
-
-DRONE_UI_USERNAME=root # Username for drone runner dashboard
-DRONE_UI_PASSWORD= # Password for drone runner dashboard
+   DRONE_GITHUB_CLIENT_ID= # Client ID from github
+   DRONE_GITHUB_CLIENT_SECRET= # Client secret from github
+   
+   DRONE_RPC_SECRET= # Some secret string for internal communication
+   
+   DRONE_SERVER_HOST=159.223.9.94 # External ip
+   DRONE_SERVER_PROTO=http # http or https
+   
+   DRONE_USER_FILTER=erentomurcuk,Herover,KnittedSox,pizzaluc,smilladion # Github users allowed to sign in
+   
+   DRONE_DATABASE_SECRET= # Database encryption secret for secrets
+   
+   DRONE_PRIVATE_KEY_FILE="/root/id_rsa" # Location of private ssh key inside drone server
+   DRONE_PUBLIC_KEY_FILE="/root/id_rsa.pub" # Location of public ssh key
+   
+   DRONE_RPC_PROTO=http # Protocol for drone-pipeline-to-drone-runner
+   DRONE_RPC_HOST=159.223.9.94 # IP of drone pipeline server
+   
+   DRONE_UI_USERNAME=root # Username for drone runner dashboard
+   DRONE_UI_PASSWORD= # Password for drone runner dashboard
    ```
 
   Use `openssl rand -hex 16` for a 16 byte random string.
