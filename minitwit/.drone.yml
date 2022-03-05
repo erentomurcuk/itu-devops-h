@@ -11,7 +11,7 @@ server:
   region: ams3
 
 steps:
-- name: testing
+- name: build
   commands:
   - chmod +x ./terraform/files/install_jdk_maven.sh
   - ./terraform/files/install_jdk_maven.sh
@@ -19,3 +19,25 @@ steps:
   - chmod +x ./control.sh
   - ./control.sh build
   - ls -al
+
+- name: test
+  commands:
+    - echo Inser tests here...
+
+- name: deploy
+  environment:
+    DOCKER_USERNAME:
+      from_secret: token
+    DOCKER_PASSWORD:
+      from_secret: token
+  commands:
+  - chmod +x ./terraform/files/install_docker.sh
+  - ./terraform/files/install_docker.sh
+  - cd minitwit
+  - docker login -u ${DOCKER_USERNAME} -p ${DOCKER_PASSWORD}
+  - docker build --tag minitwit:$DRONE_BUILD_NUMBER .
+  - docker push minitwit:$DRONE_BUILD_NUMBER
+  when:
+    # TODO: Change so it happens on merge to main/prod/some live branch
+    event:
+      - promote
