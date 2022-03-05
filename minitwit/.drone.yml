@@ -19,10 +19,18 @@ steps:
   - chmod +x ./control.sh
   - ./control.sh build
   - ls -al
+  when:
+    event:
+      include:
+      - pull_request
 
 - name: test
   commands:
-    - echo Inser tests here...
+  - echo Inser tests here...
+  when:
+    event:
+      include:
+      - pull_request
 
 - name: deploy
   environment:
@@ -40,4 +48,4 @@ steps:
   when:
     # TODO: Change so it happens on merge to main/prod/some live branch
     event:
-      - promote
+    - promote
