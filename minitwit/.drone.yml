@@ -51,7 +51,7 @@ steps:
   - docker push registry.digitalocean.com/minitwit/minitwit-server:latest
   - docker push registry.digitalocean.com/minitwit/minitwit-server:$DRONE_BUILD_NUMBER
   - apt-get install sshpass
-  - sshpass -p "$ROOT_PASSWORD" ssh root@$WEB_HOST docker pull registry.digitalocean.com/minitwit/minitwit-server:$DRONE_BUILD_NUMBER
+  - sshpass -p "$ROOT_PASSWORD" ssh -o StrictHostKeyChecking=no root@$WEB_HOST docker pull registry.digitalocean.com/minitwit/minitwit-server:$DRONE_BUILD_NUMBER
   when:
     # TODO: Change so it happens on merge to main/prod/some live branch
     event:
