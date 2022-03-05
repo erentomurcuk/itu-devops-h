@@ -43,8 +43,10 @@ steps:
   - ./terraform/files/install_docker.sh
   - cd minitwit
   - docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD" registry.digitalocean.com
-  - docker build --tag minitwit:$DRONE_BUILD_NUMBER .
-  - docker push minitwit:$DRONE_BUILD_NUMBER
+  # We could also use $DRONE_BUILD_NUMBER instead of latest, but free digitalocean docker repo only
+  # has 500mb free space where our image currently is 240 mb so we just keep 1 image around instead
+  - docker build --tag registry.digitalocean.com/minitwit/minitwit-server:latest .
+  - docker push registry.digitalocean.com/minitwit/minitwit-server:latest
   when:
     # TODO: Change so it happens on merge to main/prod/some live branch
     event:
