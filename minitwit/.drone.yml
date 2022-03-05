@@ -7,7 +7,7 @@ token:
 
 server:
   image: ubuntu-20-04-x64
-  size: s-1vcpu-1gb
+  size: c-2
   region: ams3
 
 steps:
