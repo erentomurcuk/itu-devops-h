@@ -8,7 +8,7 @@ token:
 server:
   image: ubuntu-20-04-x64
   size: c-2
-  region: fra1
+  region: nyc1
 
 steps:
 - name: build
