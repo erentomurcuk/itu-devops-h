@@ -45,6 +45,7 @@ steps:
   - docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD" registry.digitalocean.com
   - docker build --tag registry.digitalocean.com/minitwit/minitwit-server:latest --tag registry.digitalocean.com/minitwit/minitwit-server:$DRONE_BUILD_NUMBER .
   - docker push registry.digitalocean.com/minitwit/minitwit-server:latest
+  - docker push registry.digitalocean.com/minitwit/minitwit-server:$DRONE_BUILD_NUMBER
   when:
     # TODO: Change so it happens on merge to main/prod/some live branch
     event:
