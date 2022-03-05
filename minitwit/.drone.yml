@@ -34,7 +34,7 @@ steps:
   - chmod +x ./terraform/files/install_docker.sh
   - ./terraform/files/install_docker.sh
   - cd minitwit
-  - docker login -u ${DOCKER_USERNAME} -p ${DOCKER_PASSWORD}
+  - docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD" registry.digitalocean.com
   - docker build --tag minitwit:$DRONE_BUILD_NUMBER .
   - docker push minitwit:$DRONE_BUILD_NUMBER
   when:
