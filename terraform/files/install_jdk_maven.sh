@@ -5,12 +5,13 @@
 # Must run as root.
 
 echo "Updating..."
-apt-get update
-apt-get upgrade -y
+
+until apt-get update; do sleep 1; done
+until apt-get upgrade -y; do sleep 1; done
 
 echo "Installing openjdk-17-jdk and openjdk-17-jre"
-until apt-get install -y "openjdk-17-jre"; do sleep 10; done
-until apt-get install -y "openjdk-17-jdk"; do sleep 10; done
+until apt-get install -y "openjdk-17-jre"; do sleep 1; done
+until apt-get install -y "openjdk-17-jdk"; do sleep 1; done
 
 echo "Downloading maven"
 # Note: default download server (dlcdn.apache.org) returns 503 to Digital Ocean IPs at the moment
