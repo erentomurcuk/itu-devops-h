@@ -59,6 +59,8 @@ To only recreate some parts of the infrastructure, "taint" them with ex. `terraf
 
 * Add a secret called `token` in settings with the Digital Ocean API token.
 
+* Add a secret called `root_password` with the root password to the production servers.
+
 * Change the configuration file path to `minitwit/.drone.yml`.
 
 * Change project visibility to "internal".
