@@ -1,9 +1,9 @@
-drop table if exists user;
-create table user (
-  user_id integer primary key autoincrement,
-  username string not null,
-  email string not null,
-  pw_hash string not null
+drop table if exists "user";
+create table "user" (
+  user_id serial primary key,
+  username varchar not null,
+  email varchar not null,
+  pw_hash varchar not null
 );
 
 drop table if exists follower;
@@ -14,9 +14,9 @@ create table follower (
 
 drop table if exists message;
 create table message (
-  message_id integer primary key autoincrement,
+  message_id serial primary key,
   author_id integer not null,
-  text string not null,
+  text varchar not null,
   pub_date integer,
   flagged integer
 );

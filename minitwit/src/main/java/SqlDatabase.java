@@ -1,4 +1,3 @@
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URISyntaxException;
@@ -8,15 +7,16 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
-public class SQLite {
+public class SqlDatabase {
+
     private Connection connection = null;
 
     public Connection connect() throws SQLException {
-        var file = System.getenv("MINITWIT_DB_PATH");
-        if (file == null) {
-            file = "minitwit.db";
-        }
-        connection = DriverManager.getConnection("jdbc:sqlite:" + file);
+        connection = DriverManager.getConnection(
+                "jdbc:postgresql://164.90.197.133:5432/minitwit",
+                "minitwit", "EqeJDRWm9WthrvGU"
+        );
+
         return connection;
     }
 
@@ -58,7 +58,7 @@ public class SQLite {
 
 
     public static void main(String[] args) {
-        SQLite db = new SQLite();
+        SqlDatabase db = new SqlDatabase();
         try {
             db.init();
             System.out.println("Done!");

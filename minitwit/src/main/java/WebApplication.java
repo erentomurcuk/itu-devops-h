@@ -158,7 +158,7 @@ public class WebApplication {
     public static ResultSet getUser(Connection conn, Integer userId) throws SQLException {
         if (userId == null) return null;
 
-        var statement = conn.prepareStatement("select * from user where user_id = ?");
+        var statement = conn.prepareStatement("select * from \"user\" where user_id = ?");
 
         statement.setInt(1, userId);
         ResultSet rs = statement.executeQuery();
@@ -166,15 +166,15 @@ public class WebApplication {
         return rs;
     }
 
-    public static int getUserID(SQLite db, String username) throws SQLException {
+    public static int getUserID(SqlDatabase db, String username) throws SQLException {
         var conn = db.getConnection();
-        var statement = conn.prepareStatement("select user_id from user where username = ?");
+        var statement = conn.prepareStatement("select user_id from \"user\" where username = ?");
 
         statement.setString(1, username);
         ResultSet rs = statement.executeQuery();
 
         // No user with that username found
-        if (rs.isClosed()) {
+        if (rs.isClosed() || !rs.next()) {
             conn.close();
             return 0;
         }
@@ -185,12 +185,12 @@ public class WebApplication {
     }
 
     public static ArrayList<HashMap<String, Object>> getMessages() throws SQLException {
-        var db = new SQLite();
+        var db = new SqlDatabase();
         var conn = db.getConnection();
 
         var messageStmt = conn.prepareStatement(
-                "select message.*, user.* from message, user\n" +
-                        "        where message.flagged = 0 and message.author_id = user.user_id\n" +
+                "select message.*, \"user\".* from message, \"user\"\n" +
+                        "        where message.flagged = 0 and message.author_id = \"user\".user_id\n" +
                         "        order by message.pub_date desc limit ?");
         messageStmt.setInt(1, PER_PAGE);
         var messages = new ArrayList<HashMap<String, Object>>();
@@ -263,7 +263,7 @@ public class WebApplication {
     }
 
     public static String register(String username, String email, String password, String password2) throws SQLException {
-        var db = new SQLite();
+        var db = new SqlDatabase();
         if (username == null
                 || username.equals("")) {
             return "You have to enter a username";
@@ -286,13 +286,14 @@ public class WebApplication {
         else {
             String saltedPW = BCrypt.hashpw(password, BCrypt.gensalt());
 
-            var conn = new SQLite().getConnection();
-            var insert = conn.prepareStatement("insert into user (\n" +
+            var conn = new SqlDatabase().getConnection();
+            var insert = conn.prepareStatement("insert into \"user\" (\n" +
                     "                username, email, pw_hash) values (?, ?, ?)");
 
             insert.setString(1, username);
             insert.setString(2, email);
             insert.setString(3, saltedPW);
+
             insert.execute();
 
             conn.close();
@@ -316,7 +317,7 @@ public class WebApplication {
             return "Unauthorised";
         }
 
-        var db = new SQLite();
+        var db = new SqlDatabase();
         var conn = db.getConnection();
 
         var insert = conn.prepareStatement(
@@ -341,7 +342,7 @@ public class WebApplication {
     };
 
     public static Route serveFollowPage = (Request request, Response response) -> {
-        var db = new SQLite();
+        var db = new SqlDatabase();
         var conn = db.getConnection();
 
         var insert = conn.prepareStatement("insert into follower (\n" +
@@ -377,7 +378,7 @@ public class WebApplication {
 
     public static Route serveUnfollowPage = (Request request, Response response) -> {
 
-        var db = new SQLite();
+        var db = new SqlDatabase();
         var conn = db.getConnection();
 
         var insert = conn.prepareStatement("delete from follower where who_id=? and whom_id=?");
@@ -402,10 +403,10 @@ public class WebApplication {
     public static Route serveSimFllws = (Request request, Response response) -> {
         updateLatest(request);
 
-        var db = new SQLite();
+        var db = new SqlDatabase();
         var conn = db.getConnection();
 
-        var who_id = getUserID(new SQLite(), request.params(":username"));
+        var who_id = getUserID(new SqlDatabase(), request.params(":username"));
 
         if (who_id == 0) {
             conn.close();
@@ -465,7 +466,7 @@ public class WebApplication {
 
         if (Objects.equals(request.requestMethod(), "GET")) {
 
-            var insert = conn.prepareStatement("SELECT user.username FROM user INNER JOIN follower ON follower.whom_id=user.user_id WHERE follower.who_id=? LIMIT ?");
+            var insert = conn.prepareStatement("SELECT \"user\".username FROM \"user\" INNER JOIN follower ON follower.whom_id=user.user_id WHERE follower.who_id=? LIMIT ?");
 
             var noFollowers = Integer.parseInt(request.queryParamOrDefault("no", "100"));
 
@@ -521,12 +522,15 @@ public class WebApplication {
     public static Route servePublicTimelinePage = (Request request, Response response) -> {
         Map<String, Object> model = new HashMap<>();
 
-        var db = new SQLite();
+        var db = new SqlDatabase();
         var conn = db.getConnection();
 
         var userID = (Integer) request.session().attribute("user_id");
         var loggedInUser = getUser(conn, (userID));
-        if (loggedInUser != null) model.put("user", loggedInUser.getString("username"));
+
+        if (loggedInUser != null && loggedInUser.next()) {
+            model.put("user", loggedInUser.getString("username"));
+        }
 
         // Where does this come from in python?
         model.put("title", "Public Timeline");
@@ -542,12 +546,15 @@ public class WebApplication {
 
     public static Route serveUserTimelinePage = (Request request, Response response) -> {
         Map<String, Object> model = new HashMap<>();
-        var db = new SQLite();
+        var db = new SqlDatabase();
         var conn = db.getConnection();
 
         var userID = (Integer) request.session().attribute("user_id");
         var loggedInUser = getUser(conn, (userID));
-        if (loggedInUser != null) model.put("user", loggedInUser.getString("username"));
+
+        if (loggedInUser != null && loggedInUser.next()) {
+            model.put("user", loggedInUser.getString("username"));
+        }
 
         else if (loggedInUser == null) {
             response.redirect(URLS.PUBLIC_TIMELINE);
@@ -559,10 +566,10 @@ public class WebApplication {
         model.put("title", "My Timeline");
 
         var statement = conn.prepareStatement(
-                "        select message.*, user.* from message, user\n" +
-                        "        where message.flagged = 0 and message.author_id = user.user_id and (\n" +
-                        "            user.user_id = ? or\n" +
-                        "            user.user_id in (select whom_id from follower\n" +
+                "        select message.*, \"user\".* from message, \"user\"\n" +
+                        "        where message.flagged = 0 and message.author_id = \"user\".user_id and (\n" +
+                        "            \"user\".user_id = ? or\n" +
+                        "            \"user\".user_id in (select whom_id from follower\n" +
                         "                                    where who_id = ?))\n" +
                         "        order by message.pub_date desc limit ?");
 
@@ -594,12 +601,13 @@ public class WebApplication {
     public static Route serveUserByUsernameTimelinePage = (Request request, Response response) -> {
         Map<String, Object> model = new HashMap<>();
 
-        var db = new SQLite();
+        var db = new SqlDatabase();
         var conn = db.getConnection();
 
         var userID = (Integer) request.session().attribute("user_id");
         var loggedInUser = getUser(conn, (userID));
-        if (loggedInUser != null) {
+
+        if (loggedInUser != null && loggedInUser.next()) {
             model.put("user", loggedInUser.getString("username"));
             model.put("user_id", loggedInUser.getInt("user_id"));
         }
@@ -607,11 +615,11 @@ public class WebApplication {
         model.put("endpoint", URLS.USER_TIMELINE);
 
         var profileStmt = conn.prepareStatement(
-                "select * from user where username = ?"
+                "select * from \"user\" where username = ?"
         );
         profileStmt.setString(1, request.params(":username"));
         var profileRs = profileStmt.executeQuery();
-        if (profileRs.isClosed()) {
+        if (profileRs.isClosed() || !profileRs.next()) {
             response.status(404);
             conn.close();
             return "404"; // TODO: What does the old one do?
@@ -631,7 +639,7 @@ public class WebApplication {
             followedStmt.setInt(1, userID);
             followedStmt.setInt(2, (Integer) profileUser.get("user_id"));
             var followedRs = followedStmt.executeQuery();
-            if (!followedRs.isClosed()) {
+            if (!followedRs.isClosed() || !followedRs.next()) {
                 model.put("followed", true);
             } else {
                 model.put("followed", false);
@@ -641,8 +649,8 @@ public class WebApplication {
         }
 
         var messageStmt = conn.prepareStatement(
-                "select message.*, user.* from message, user where\n" +
-                        "            user.user_id = message.author_id and user.user_id = ?\n" +
+                "select message.*, \"user\".* from message, \"user\" where\n" +
+                        "            \"user\".user_id = message.author_id and \"user\".user_id = ?\n" +
                         "            order by message.pub_date desc limit ?");
         messageStmt.setInt(1, (int) profileUser.get("user_id"));
         messageStmt.setInt(2, PER_PAGE);
@@ -669,9 +677,9 @@ public class WebApplication {
     public static Route serveRegisterPage = (Request request, Response response) -> {
         Map<String, Object> model = new HashMap<>();
 
-        var db = new SQLite();
+        var db = new SqlDatabase();
         var conn = db.getConnection();
-        var insert = conn.prepareStatement("insert into user (\n" +
+        var insert = conn.prepareStatement("insert into \"user\" (\n" +
                 "username, email, pw_hash) values (?, ?, ?)");
 
         // TODO: Get logged in user (if any)
@@ -719,14 +727,14 @@ public class WebApplication {
         var enteredPW = request.queryParams("password");
 
         if (request.requestMethod().equals("POST")) {
-            var db = new SQLite();
+            var db = new SqlDatabase();
             var connection = db.getConnection();
-            var lookup = connection.prepareStatement("select * from user where\n" +
+            var lookup = connection.prepareStatement("select * from \"user\" where\n" +
                     "            username = ?");
             lookup.setString(1, enteredUserName);
             ResultSet rs = lookup.executeQuery();
 
-            if (rs.isClosed()) {
+            if (rs.isClosed() || !rs.next()) {
                 model.put("error", "Invalid username");
             }
             else if (!BCrypt.checkpw(enteredPW, rs.getString("pw_hash"))) {
@@ -796,7 +804,7 @@ public class WebApplication {
     public static Route serveSimMsgsUsr = (Request request, Response response) -> {
         updateLatest(request);
 
-        SQLite db = new SQLite();
+        SqlDatabase db = new SqlDatabase();
         var connection = db.getConnection();
         var userID = getUserID(db, request.params(":username"));
 
@@ -809,9 +817,9 @@ public class WebApplication {
                 return "404 Not Found";
             }
             else {
-                var query = connection.prepareStatement("SELECT message.*, user.* FROM message, user " +
+                var query = connection.prepareStatement("SELECT message.*, \"user\".* FROM message, \"user\" " +
                         "                   WHERE message.flagged = 0 AND" +
-                        "                   user.user_id = message.author_id AND user.user_id = ?" +
+                        "                   \"user\".user_id = message.author_id AND \"user\".user_id = ?" +
                         "                   ORDER BY message.pub_date DESC LIMIT ?" );
                 query.setInt(1, userID);
                 query.setInt(2, noMsgs);
