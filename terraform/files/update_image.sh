@@ -1,6 +1,9 @@
 #!/bin/bash
 
 IMAGE=$1
+DRONE_BUILD_NUMBER=$2
+DOCKER_USERNAME=$3
+DOCKER_PASSWORD=$4
 
 echo "Logging in"
 docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD" registry.digitalocean.com

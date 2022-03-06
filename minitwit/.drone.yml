@@ -53,7 +53,7 @@ steps:
   # Pull on prod server
   - apt-get install sshpass
   - sshpass -p "$ROOT_PASSWORD" scp -o StrictHostKeyChecking=no ../terraform/files/update_image.sh root@$IP:/tmp/
-  - sshpass -p "$ROOT_PASSWORD" ssh -o StrictHostKeyChecking=no root@$WEB_HOST chmod +x /tmp/update_image.sh && /tmp/update_image.sh registry.digitalocean.com/minitwit/minitwit-server:$DRONE_BUILD_NUMBER
+  - sshpass -p "$ROOT_PASSWORD" ssh -o StrictHostKeyChecking=no root@$WEB_HOST chmod +x /tmp/update_image.sh && /tmp/update_image.sh registry.digitalocean.com/minitwit/minitwit-server $DRONE_BUILD_NUMBER $DOCKER_USERNAME $DOCKER_PASSWORD
   when:
     # TODO: Change so it happens on merge to main/prod/some live branch
     event:
