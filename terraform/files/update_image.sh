@@ -5,7 +5,7 @@ DRONE_BUILD_NUMBER=$2
 DOCKER_USERNAME=$3
 DOCKER_PASSWORD=$4
 
-echo "Logging in"
+echo "Logging in to registry"
 docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD" registry.digitalocean.com
 echo "Pulling image $IMAGE:$DRONE_BUILD_NUMBER"
 docker pull $IMAGE:$DRONE_BUILD_NUMBER
@@ -22,3 +22,5 @@ docker images | \
     cut -d " " -f 1,2 --output-delimiter=":" | \
     grep --invert-match "$IMAGE\:$DRONE_BUILD_NUMBER" | \
     xargs -I {} docker rmi {}
+# Logging out of registry
+docker logout registry.digitalocean.com
