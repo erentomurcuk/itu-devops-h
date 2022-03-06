@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Installs software on drone server
+# First parameter is IP
+
 IP=$1
 
 scp ./files/install_docker.sh root@$IP:/tmp/
