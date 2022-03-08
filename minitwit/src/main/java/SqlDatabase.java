@@ -11,7 +11,7 @@ public class SqlDatabase {
     private Connection connection = null;
 
     public Connection connect() throws SQLException {
-        String password = System.getenv("DB_PASSWORD");
+        String password = System.getenv("MINITWIT_DB_PASS");
 
         if (password == null) {
             throw new IllegalStateException("Password for the database is required");
