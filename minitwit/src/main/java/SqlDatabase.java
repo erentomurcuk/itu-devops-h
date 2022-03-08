@@ -11,9 +11,15 @@ public class SqlDatabase {
     private Connection connection = null;
 
     public Connection connect() throws SQLException {
+        String password = System.getenv("DB_PASSWORD");
+
+        if (password == null) {
+            throw new IllegalStateException("Password for the database is required");
+        }
+
         connection = DriverManager.getConnection(
                 "jdbc:postgresql://164.90.197.133:5432/minitwit",
-                "minitwit", "EqeJDRWm9WthrvGU"
+                "minitwit", password
         );
 
         return connection;
