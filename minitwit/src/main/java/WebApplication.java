@@ -639,7 +639,7 @@ public class WebApplication {
             followedStmt.setInt(1, userID);
             followedStmt.setInt(2, (Integer) profileUser.get("user_id"));
             var followedRs = followedStmt.executeQuery();
-            if (!followedRs.isClosed() || !followedRs.next()) {
+            if (!followedRs.isClosed() && followedRs.next()) {
                 model.put("followed", true);
             } else {
                 model.put("followed", false);
