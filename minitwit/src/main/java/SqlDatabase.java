@@ -19,7 +19,7 @@ public class SqlDatabase {
 
         connection = DriverManager.getConnection(
                 "jdbc:postgresql://164.90.197.133:5432/minitwit",
-                "minitwit", password
+                "minitwituser", password
         );
 
         return connection;
