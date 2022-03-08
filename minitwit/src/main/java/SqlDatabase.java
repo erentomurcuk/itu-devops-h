@@ -3,7 +3,6 @@ import java.io.InputStream;
 import java.net.URISyntaxException;
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
@@ -39,23 +38,12 @@ public class SqlDatabase {
 
         // Run the sql in the schema file on the database
         Statement statement = connection.createStatement();
-        for (String statementLine:
-                schemaStatements) {
-            System.out.println(statementLine.trim());
-            try {
-                ResultSet rs = statement.executeQuery(statementLine.trim());
-                rs.next();
-            } catch (Exception e) {
-                // Someone more clever than me please change above to
-                // statement.execute(statementLine.trim());
-                // and remove rs part.
-                // Exceptions are expected because executeQuery expects the
-                // query to return a ResultSet but some that we use doesn't.
-            }
-        }
-        //statement.close();
-    }
 
+        for (String statementLine: schemaStatements) {
+            System.out.println(statementLine.trim());
+            statement.executeUpdate(statementLine.trim());
+        }
+    }
 
     public static void main(String[] args) {
         SqlDatabase db = new SqlDatabase();
