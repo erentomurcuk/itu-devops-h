@@ -1,20 +1,11 @@
 kind: pipeline
-type: digitalocean
+type: docker
 name: Minitwit server
-
-token:
-  from_secret: token
-
-server:
-  image: ubuntu-20-04-x64
-  size: c-2
-  region: nyc1
 
 steps:
 - name: build
+  image: maven:3.8.4-openjdk-17-slim
   commands:
-  - chmod +x ./terraform/files/install_jdk_maven.sh
-  - ./terraform/files/install_jdk_maven.sh
   - cd minitwit
   - chmod +x ./control.sh
   - ./control.sh build
@@ -25,6 +16,7 @@ steps:
       - pull_request
 
 - name: test
+  image: maven:3.8.4-openjdk-17-slim
   commands:
   - echo Inser tests here...
   when:
@@ -32,7 +24,8 @@ steps:
       include:
       - pull_request
 
-- name: deploy
+- name: deploy DOESNT WORK
+  image: maven:3.8.4-openjdk-17-slim
   environment:
     DOCKER_USERNAME:
       from_secret: token

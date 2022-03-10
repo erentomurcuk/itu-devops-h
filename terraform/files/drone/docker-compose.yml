@@ -18,22 +18,16 @@ services:
       DRONE_USER_FILTER: ${DRONE_USER_FILTER}
       DRONE_DATABASE_SECRET: ${DRONE_DATABASE_SECRET}
 
-  drone-runner-do:
-    image: drone/drone-runner-digitalocean:1.0.1
+  drone-runner-docker:
+    image: drone/drone-runner-docker:1
     ports:
       - "3000:3000"
-    volumes:
-      - /root/id_rsa:${DRONE_PRIVATE_KEY_FILE}
-      - /root/id_rsa.pub:${DRONE_PUBLIC_KEY_FILE}
     environment:
       DRONE_RPC_PROTO: ${DRONE_RPC_PROTO}
       DRONE_RPC_HOST: ${DRONE_RPC_HOST}
       DRONE_RPC_SECRET: ${DRONE_RPC_SECRET}
-      DRONE_PUBLIC_KEY_FILE: ${DRONE_PUBLIC_KEY_FILE}
-      DRONE_PRIVATE_KEY_FILE: ${DRONE_PRIVATE_KEY_FILE}
       DRONE_UI_USERNAME: ${DRONE_UI_USERNAME}
       DRONE_UI_PASSWORD: ${DRONE_UI_PASSWORD}
-      DRONE_DATABASE_SECRET: ${DRONE_DATABASE_SECRET}
 
 networks:
   drone:
