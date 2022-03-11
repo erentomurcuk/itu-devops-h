@@ -24,7 +24,7 @@ steps:
       include:
       - pull_request
 
-- name: docker-image
+- name: create and push docker image
   image: plugins/docker
   settings:
     registry: registry.digitalocean.com
@@ -42,7 +42,7 @@ steps:
     event:
     - promote
 
-- name: update servers 
+- name: update live docker images
   image: alpine:3.15.0
   environment:
     DOCKER_USERNAME:
