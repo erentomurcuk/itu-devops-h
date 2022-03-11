@@ -43,8 +43,8 @@ steps:
       from_secret: token
     repo: registry.digitalocean.com/minitwit/minitwit-server
     tags:
-      - latest
-      - $DRONE_BUILD_NUMBER
+      - "latest"
+      - "${DRONE_BUILD_NUMBER}"
     dockerfile: minitwit/Dockerfile
     context: minitwit
   #commands:
