@@ -38,6 +38,9 @@ steps:
       - "${DRONE_BUILD_NUMBER}"
     dockerfile: minitwit/Dockerfile
     context: minitwit
+  when:
+    event:
+    - promote
 
 - name: update servers 
   image: docker:20.10.13
