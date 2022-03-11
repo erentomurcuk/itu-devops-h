@@ -41,7 +41,7 @@ steps:
       from_secret: token
     password:
       from_secret: token
-    repo: minitwit/minitwit-server
+    repo: registry.digitalocean.com/minitwit/minitwit-server
     tags:
       - latest
       - $DRONE_BUILD_NUMBER
