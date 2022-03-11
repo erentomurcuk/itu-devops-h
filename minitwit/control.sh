@@ -15,6 +15,7 @@ function start {
 
 function build {
     # The output filename depends on what's in pom.xml
+    source ~/.profile
     mvn clean compile assembly:single && \
         cp target/minitwit-1.0-SNAPSHOT-jar-with-dependencies.jar ./minitwit.jar
 }
