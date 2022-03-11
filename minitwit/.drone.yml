@@ -1,3 +1,4 @@
+---
 kind: pipeline
 type: docker
 name: Minitwit server
@@ -61,3 +62,8 @@ steps:
   when:
     event:
     - promote
+
+---
+
+kind: signature
+hmac: 0ddd9fce1f4bf1eacf66e605eeec5b80797d34f50c207ce92fa331929f28b90f
