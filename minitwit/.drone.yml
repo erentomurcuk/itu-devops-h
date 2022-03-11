@@ -24,17 +24,8 @@ steps:
       include:
       - pull_request
 
-- name: deploy
+- name: docker-image
   image: plugins/docker
-  #environment:
-  #  DOCKER_USERNAME:
-  #    from_secret: token
-  #  DOCKER_PASSWORD:
-  #    from_secret: token
-  #  ROOT_PASSWORD:
-  #    from_secret: root_password
-  #  WEB_HOST:
-  #    "143.198.249.10"
   settings:
     registry: registry.digitalocean.com
     username:
@@ -47,17 +38,19 @@ steps:
       - "${DRONE_BUILD_NUMBER}"
     dockerfile: minitwit/Dockerfile
     context: minitwit
-  #commands:
-  #- cd minitwit
-  #- docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD" registry.digitalocean.com
-  #- docker build --tag registry.digitalocean.com/minitwit/minitwit-server:latest --tag registry.digitalocean.com/minitwit/minitwit-server:$DRONE_BUILD_NUMBER .
-  #- docker push registry.digitalocean.com/minitwit/minitwit-server:latest
-  #- docker push registry.digitalocean.com/minitwit/minitwit-server:$DRONE_BUILD_NUMBER
-  ## Pull on prod server
-  #- apt-get install sshpass
-  #- sshpass -p "$ROOT_PASSWORD" scp -o StrictHostKeyChecking=no ../terraform/files/update_image.sh root@$WEB_HOST:/tmp/
-  #- sshpass -p "$ROOT_PASSWORD" ssh -o StrictHostKeyChecking=no root@$WEB_HOST chmod +x /tmp/update_image.sh
-  #- sshpass -p "$ROOT_PASSWORD" ssh -o StrictHostKeyChecking=no root@$WEB_HOST /tmp/update_image.sh registry.digitalocean.com/minitwit/minitwit-server $DRONE_BUILD_NUMBER $DOCKER_USERNAME $DOCKER_PASSWORD
+
+- name: update servers 
+  image: docker:20.10.13
+  environment:
+    ROOT_PASSWORD:
+      from_secret: root_password
+    WEB_HOST:
+      "143.198.249.10"
+  commands:
+  - apt-get install sshpass -y
+  - sshpass -p "$ROOT_PASSWORD" scp -o StrictHostKeyChecking=no ../terraform/files/update_image.sh root@$WEB_HOST:/tmp/
+  - sshpass -p "$ROOT_PASSWORD" ssh -o StrictHostKeyChecking=no root@$WEB_HOST chmod +x /tmp/update_image.sh
+  - sshpass -p "$ROOT_PASSWORD" ssh -o StrictHostKeyChecking=no root@$WEB_HOST /tmp/update_image.sh registry.digitalocean.com/minitwit/minitwit-server $DRONE_BUILD_NUMBER $DOCKER_USERNAME $DOCKER_PASSWORD
   when:
     event:
     - promote
