@@ -72,3 +72,13 @@ To only recreate some parts of the infrastructure, "taint" them with ex. `terraf
 Sometimes drone fails without explaination or during java installation. Try rerun it a 2-3 times before debuging it.
 
 If a build takes more than 5 minutes (at the time of writing) then it's likely to be stuck. Cancel it and restart it. Drone will automatically terminate very long running builds.
+
+## Prometheus
+
+Will be accessible from the droplet ip on port 9090.
+
+# Grafana
+
+Will be accessible from the droplet ip on port 3000. On first setup, go to the front page and log in with admin/admin, and change the password.
+
+Dashboards are added manually, but there's a collection of "standard" dashboards on https://grafana.com/grafana/dashboards.
