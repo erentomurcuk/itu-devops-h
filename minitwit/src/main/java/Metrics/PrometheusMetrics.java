@@ -10,7 +10,7 @@ import java.io.StringWriter;
 public class PrometheusMetrics {
     final private CollectorRegistry registry = CollectorRegistry.defaultRegistry;
 
-    final private String prefix = "minitwit_";
+    static final private String prefix = "minitwit_";
 
     final static Histogram requestLatency = Histogram.build()
             .labelNames("endpoint_type")
