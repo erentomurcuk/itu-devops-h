@@ -10,39 +10,41 @@ import java.io.StringWriter;
 public class PrometheusMetrics {
     final private CollectorRegistry registry = CollectorRegistry.defaultRegistry;
 
+    final private String prefix = "minitwit_";
+
     final static Histogram requestLatency = Histogram.build()
             .labelNames("endpoint_type")
-            .name("requests_time_seconds")
+            .name(prefix + "requests_time_seconds")
             .help("Request processing time")
             .register();
     final static Counter registrations = Counter.build()
             .labelNames("endpoint_type")
-            .name("registrations_total")
+            .name(prefix + "registrations_total")
             .help("Total registrations.")
             .register();
     final static Counter follows = Counter.build()
             .labelNames("endpoint_type")
-            .name("follows_total")
+            .name(prefix + "follows_total")
             .help("Total follows.")
             .register();
     final static Counter unfollows = Counter.build()
             .labelNames("endpoint_type")
-            .name("unfollows_total")
+            .name(prefix + "unfollows_total")
             .help("Total unfollows.")
             .register();
     final static Counter messages = Counter.build()
             .labelNames("endpoint_type")
-            .name("messages_total")
+            .name(prefix + "messages_total")
             .help("Total messages.")
             .register();
     final static Counter signins = Counter.build()
             .labelNames("endpoint_type")
-            .name("signins_total")
+            .name(prefix + "signins_total")
             .help("Total signins.")
             .register();
     final static Counter signouts = Counter.build()
             .labelNames("endpoint_type")
-            .name("signouts_total")
+            .name(prefix + "signouts_total")
             .help("Total signouts.")
             .register();
 
