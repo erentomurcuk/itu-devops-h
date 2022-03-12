@@ -124,7 +124,6 @@ public class WebApplication {
         });
 
         after("/*", (req, res) -> {
-            System.out.println(req.matchedPath());
             TimerStopper stopper = req.attribute("timer");
             if (stopper != null) {
                 stopper.handle();
