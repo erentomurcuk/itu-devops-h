@@ -1,4 +1,5 @@
 import Metrics.PrometheusMetrics;
+import Metrics.TimerStopper;
 import com.google.gson.annotations.SerializedName;
 import com.google.gson.Gson;
 import com.timgroup.jgravatar.Gravatar;
@@ -91,6 +92,10 @@ public class WebApplication {
             .setRating(GravatarRating.GENERAL_AUDIENCES)
             .setDefaultImage(GravatarDefaultImage.IDENTICON);
 
+    private static final String METRIC_TYPE_WEB = "web";
+    private static final String METRIC_TYPE_API = "api";
+    private static final String METRIC_TYPE_METRICS = "metrics";
+
     public static void main(String[] args) {
         System.out.println("Hello Minitwit");
 
@@ -103,6 +108,15 @@ public class WebApplication {
         staticFiles.location("/static");
 
         before("/*", (req, res) -> {
+            req.attribute("metrics", metrics);
+            if (!req.uri().startsWith("/static")) {
+                req.attribute(
+                        "timer",
+                        metrics.getRequestTimer(req.uri().startsWith("/api")
+                                ? METRIC_TYPE_API
+                                : req.uri().startsWith("/metrics") ? METRIC_TYPE_METRICS : METRIC_TYPE_WEB)
+                );
+            }
             // Setup initial session state once
             if (req.session().isNew()) {
                 req.session().attribute("alerts", new ArrayList<>());
@@ -110,6 +124,11 @@ public class WebApplication {
         });
 
         after("/*", (req, res) -> {
+            System.out.println(req.matchedPath());
+            TimerStopper stopper = req.attribute("timer");
+            if (stopper != null) {
+                stopper.handle();
+            }
             // TODO: currently doesn't log query parameters or unusual headers
             System.out.println(LocalDateTime.now() + " - " + req.uri() + " - " + res.status());
         });
@@ -344,6 +363,9 @@ public class WebApplication {
 
         response.redirect(URLS.USER, 303);
 
+        PrometheusMetrics metrics = request.attribute("metrics");
+        metrics.incrementMessages(METRIC_TYPE_WEB);
+
         return "";
     };
 
@@ -379,6 +401,9 @@ public class WebApplication {
 
         addAlert(request.session(), "You are now following " + request.params(":username"));
 
+        PrometheusMetrics metrics = request.attribute("metrics");
+        metrics.incrementFollows(METRIC_TYPE_WEB);
+
         return "";
     };
 
@@ -402,6 +427,9 @@ public class WebApplication {
         response.redirect(URLS.urlFor(URLS.USER_TIMELINE, Map.ofEntries(
                 Map.entry("username", request.params(":username"))
         )));
+
+        PrometheusMetrics metrics = request.attribute("metrics");
+        metrics.incrementUnfollows(METRIC_TYPE_API);
 
         return "";
     };
@@ -444,6 +472,10 @@ public class WebApplication {
             conn.close();
 
             response.status(204);
+
+            PrometheusMetrics metrics = request.attribute("metrics");
+            metrics.incrementFollows(METRIC_TYPE_API);
+
             return "";
 
         }
@@ -467,6 +499,10 @@ public class WebApplication {
             conn.close();
 
             response.status(204);
+
+            PrometheusMetrics metrics = request.attribute("metrics");
+            metrics.incrementUnfollows(METRIC_TYPE_API);
+
             return "";
         }
 
@@ -706,6 +742,9 @@ public class WebApplication {
 
                 response.redirect(URLS.LOGIN);
 
+                PrometheusMetrics metrics = request.attribute("metrics");
+                metrics.incrementRegistrations(METRIC_TYPE_WEB);
+
                 // No need to render due to redirect
                 // Rendering would clear the alerts too early
                 return null;
@@ -750,6 +789,9 @@ public class WebApplication {
 
                 response.redirect(URLS.USER);
 
+                PrometheusMetrics metrics = request.attribute("metrics");
+                metrics.incrementSignins(METRIC_TYPE_WEB);
+
                 // No need to render due to redirect
                 // Rendering would clear the alerts too early
                 return null;
@@ -767,6 +809,10 @@ public class WebApplication {
         addAlert(request.session(), "You were logged out");
 
         response.redirect(URLS.PUBLIC_TIMELINE);
+
+        PrometheusMetrics metrics = request.attribute("metrics");
+        metrics.incrementSignouts(METRIC_TYPE_WEB);
+
         return null;
     };
 
@@ -851,6 +897,10 @@ public class WebApplication {
             query.execute();
             connection.close();
             response.status(204);
+
+            PrometheusMetrics metrics = request.attribute("metrics");
+            metrics.incrementMessages(METRIC_TYPE_API);
+
             return "";
         }
         connection.close();
@@ -869,6 +919,10 @@ public class WebApplication {
         var error = register(username, email, password, password);
         if (error != null) {
             response.status(400);
+
+            PrometheusMetrics metrics = request.attribute("metrics");
+            metrics.incrementRegistrations(METRIC_TYPE_API);
+
             return gson.toJson(
                     Map.ofEntries(
                             Map.entry("status", 400),
