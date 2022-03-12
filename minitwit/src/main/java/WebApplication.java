@@ -1,3 +1,4 @@
+import Metrics.PrometheusMetrics;
 import com.google.gson.annotations.SerializedName;
 import com.google.gson.Gson;
 import com.timgroup.jgravatar.Gravatar;
@@ -80,6 +81,8 @@ public class WebApplication {
 
     public static Gson gson = new Gson();
 
+    public static PrometheusMetrics metrics = new PrometheusMetrics();
+
     // The ID of the latest request made by the simulator
     public static int LATEST = 0;
 
@@ -111,6 +114,9 @@ public class WebApplication {
             System.out.println(LocalDateTime.now() + " - " + req.uri() + " - " + res.status());
         });
 
+        //before("/metrics", protectEndpoint("Basic asdf"));
+        get("/metrics", catchRoute(WebApplication.serveMetrics));
+
         get(URLS.PUBLIC_TIMELINE, catchRoute(WebApplication.servePublicTimelinePage));
         get(URLS.REGISTER, catchRoute(WebApplication.serveRegisterPage));
         get(URLS.LOGIN, catchRoute(WebApplication.serveLoginPage));
@@ -128,7 +134,8 @@ public class WebApplication {
         // Sim API
         path("/api", () -> {
             // All endpoints in this path must be authenticated
-            before("/*", protectEndpoint);
+            // Auth code is simulator:super_safe!
+            before("/*", protectEndpoint("Basic c2ltdWxhdG9yOnN1cGVyX3NhZmUh"));
 
             get(URLS.SIM_MESSAGES, catchRoute(WebApplication.serveSimMsgs), gson::toJson);
             post(URLS.SIM_REGISTER, catchRoute(WebApplication.serveSimRegister)); // Handles JSON on its own
@@ -763,17 +770,18 @@ public class WebApplication {
         return null;
     };
 
-    public static Filter protectEndpoint = (Request request, Response response) -> {
-        var auth = request.headers("Authorization");
-        // Auth code is simulator:super_safe!
-        if (auth == null || !auth.equals("Basic c2ltdWxhdG9yOnN1cGVyX3NhZmUh")) {
-            halt(403, gson.toJson(
-                    Map.ofEntries(
-                            Map.entry("status", 403),
-                            Map.entry("error_msg", "You are not authorized to use this resource!")
-                    )
-            ));
-        }
+    public static Filter protectEndpoint (String expectedAuth)  {
+        return (Request request, Response response) -> {
+            var auth = request.headers("Authorization");
+            if (auth == null || !auth.equals(expectedAuth)) {
+                halt(403, gson.toJson(
+                        Map.ofEntries(
+                                Map.entry("status", 403),
+                                Map.entry("error_msg", "You are not authorized to use this resource!")
+                        )
+                ));
+            }
+        };
     };
 
     public static Route serveSimMsgs = (Request request, Response response) -> {
@@ -877,5 +885,9 @@ public class WebApplication {
         Map<String, Integer> map = new HashMap<>();
         map.put("latest", LATEST);
         return map;
+    };
+
+    public static Route serveMetrics = (Request request, Response response) -> {
+        return metrics.metrics();
     };
 }
