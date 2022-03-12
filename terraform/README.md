@@ -82,3 +82,5 @@ Will be accessible from the droplet ip on port 9090.
 Will be accessible from the droplet ip on port 3000. On first setup, go to the front page and log in with admin/admin, and change the password.
 
 Dashboards are added manually, but there's a collection of "standard" dashboards on https://grafana.com/grafana/dashboards.
+
+After setting up a useful dashboard, consider saving its JSON Model so it can easily be recreated if the data is lost.
