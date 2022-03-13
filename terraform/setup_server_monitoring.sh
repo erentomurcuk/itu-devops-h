@@ -16,3 +16,6 @@ ssh root@$IP mkdir -p /opt/grafana /opt/prometheus
 ssh root@$IP chmod --recursive g+rw /opt/grafana
 ssh root@$IP chown nobody:root /opt/prometheus
 ssh root@$IP cd /root/monitoring \&\& docker-compose up -d
+
+scp ./files/install_node_exporter.sh root@$IP:/tmp/
+ssh root@$IP cd /tmp \&\& chmod +x ./install_node_exporter.sh \&\& ./install_node_exporter.sh
