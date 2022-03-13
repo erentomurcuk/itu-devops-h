@@ -134,6 +134,7 @@ public class WebApplication {
 
         //before("/metrics", protectEndpoint("Basic asdf"));
         get("/metrics", catchRoute(WebApplication.serveMetrics));
+        get("/metrics/stats", catchRoute(WebApplication.serveStats), gson::toJson);
 
         get(URLS.PUBLIC_TIMELINE, catchRoute(WebApplication.servePublicTimelinePage));
         get(URLS.REGISTER, catchRoute(WebApplication.serveRegisterPage));
@@ -942,5 +943,102 @@ public class WebApplication {
 
     public static Route serveMetrics = (Request request, Response response) -> {
         return metrics.metrics();
+    };
+
+    public static Route serveStats = (Request request, Response response) -> {
+        SQLite db = new SQLite();
+        var connection = db.getConnection();
+
+        String bucketSizeParam = request.queryParams("bucket_size");
+        if (bucketSizeParam == null) {
+            bucketSizeParam = "10";
+        }
+        var bucketSize = Integer.parseInt(bucketSizeParam);
+
+        /*
+        SELECT
+            CAST(followings/10 AS INT)*10 AS bucket_floor, -- CAST(x AS int) == FLOOR(x)
+            COUNT(followings) AS count
+        FROM (
+            SELECT
+                who_id,
+                count(whom_id) AS followings
+            FROM follower
+            GROUP BY who_id
+        )
+        GROUP BY 1
+        ORDER BY 1
+         */
+        var followersSql =
+                "SELECT\n" +
+                "   CAST(followings/? AS INT)*? AS bucket_floor, -- CAST(x AS int) == FLOOR(x)\n" +
+                "   COUNT(followings) AS count\n" +
+                "FROM (\n" +
+                "   SELECT\n" +
+                "       who_id,\n" +
+                "       count(whom_id) AS followings\n" +
+                "   FROM follower\n" +
+                "   GROUP BY who_id\n" +
+                ")\n" +
+                "GROUP BY 1\n" +
+                "ORDER BY 1";
+        var followersQuery = connection.prepareStatement(followersSql);
+        followersQuery.setInt(1, bucketSize);
+        followersQuery.setInt(2, bucketSize);
+
+        var followersBuckets = followersQuery.executeQuery();
+
+        var followers = new ArrayList<Map>();
+        while(followersBuckets.next()) {
+            followers.add(Map.ofEntries(
+                    Map.entry("bucket",
+                            followersBuckets.getInt("bucket_floor")
+                                    + "-"
+                                    + (followersBuckets.getInt("bucket_floor") + bucketSize - 1)
+                    ),
+                    Map.entry("n", followersBuckets.getInt(2))
+            ));
+        }
+
+
+
+        var followingSql =
+                "SELECT\n" +
+                        "   CAST(followings/? AS INT)*? AS bucket_floor, -- CAST(x AS int) == FLOOR(x)\n" +
+                        "   COUNT(followings) AS count\n" +
+                        "FROM (\n" +
+                        "   SELECT\n" +
+                        "       whom_id,\n" +
+                        "       count(who_id) AS followings\n" +
+                        "   FROM follower\n" +
+                        "   GROUP BY whom_id\n" +
+                        ")\n" +
+                        "GROUP BY 1\n" +
+                        "ORDER BY 1";
+        var followingQuery = connection.prepareStatement(followingSql);
+        followingQuery.setInt(1, bucketSize);
+        followingQuery.setInt(2, bucketSize);
+
+        var followingBuckets = followingQuery.executeQuery();
+
+        var following = new ArrayList<Map>();
+        while(followingBuckets.next()) {
+            following.add(Map.ofEntries(
+                    Map.entry("bucket",
+                            followingBuckets.getInt("bucket_floor")
+                                    + "-"
+                                    + (followingBuckets.getInt("bucket_floor") + bucketSize - 1)
+                    ),
+                    Map.entry("n", followingBuckets.getInt(2))
+            ));
+        }
+
+
+        connection.close();
+
+        return Map.ofEntries(
+                Map.entry("followerStats", followers),
+                Map.entry("followingStats", following)
+        );
     };
 }
