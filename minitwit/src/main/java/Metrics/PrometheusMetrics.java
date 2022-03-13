@@ -13,7 +13,7 @@ public class PrometheusMetrics {
     static final private String prefix = "minitwit_";
 
     final static Histogram requestLatency = Histogram.build()
-            .labelNames("endpoint_type")
+            .labelNames("endpoint_type", "status_code")
             .name(prefix + "requests_time_seconds")
             .help("Request processing time")
             .register();
@@ -77,6 +77,7 @@ public class PrometheusMetrics {
         return this;
     }
 
+    /*
     public TimerStopper getRequestTimer(String type) {
         Histogram.Timer requestTimer = requestLatency
                 .labels(type)
@@ -85,6 +86,12 @@ public class PrometheusMetrics {
             requestTimer
                     .observeDuration();
         };
+    }
+    */
+
+    public PrometheusMetrics observeRequestTime(long latencyInMillis, String type, int statusCode) {
+        requestLatency.labels(type, "" + statusCode).observe(latencyInMillis);
+        return this;
     }
 
     public String metrics() throws IOException {

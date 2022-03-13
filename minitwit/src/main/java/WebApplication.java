@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 public class WebApplication {
 
@@ -110,12 +111,7 @@ public class WebApplication {
         before("/*", (req, res) -> {
             req.attribute("metrics", metrics);
             if (!req.uri().startsWith("/static")) {
-                req.attribute(
-                        "timer",
-                        metrics.getRequestTimer(req.uri().startsWith("/api")
-                                ? METRIC_TYPE_API
-                                : req.uri().startsWith("/metrics") ? METRIC_TYPE_METRICS : METRIC_TYPE_WEB)
-                );
+                req.attribute("startTime", System.nanoTime());
             }
             // Setup initial session state once
             if (req.session().isNew()) {
@@ -124,9 +120,16 @@ public class WebApplication {
         });
 
         after("/*", (req, res) -> {
-            TimerStopper stopper = req.attribute("timer");
-            if (stopper != null) {
-                stopper.handle();
+            long startTime = req.attribute("startTime");
+            if (startTime != 0) {
+                long time = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime);
+                metrics.observeRequestTime(
+                        time,
+                        req.uri().startsWith("/api")
+                                ? METRIC_TYPE_API
+                                : req.uri().startsWith("/metrics") ? METRIC_TYPE_METRICS : METRIC_TYPE_WEB,
+                        res.status()
+                );
             }
             // TODO: currently doesn't log query parameters or unusual headers
             System.out.println(LocalDateTime.now() + " - " + req.uri() + " - " + res.status());
