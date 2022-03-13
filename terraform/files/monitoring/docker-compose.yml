@@ -15,3 +15,5 @@ services:
       - /opt/grafana/lib:/var/lib/grafana:rw
       #- /opt/grafana/etc:/etc/grafana:rw
       #- /opt/grafana/log:/var/log/grafana:rw
+    environment:
+      - GF_INSTALL_PLUGINS=marcusolsson-json-datasource
