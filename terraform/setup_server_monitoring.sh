@@ -6,7 +6,7 @@
 IP=$1
 
 scp ./files/install_docker.sh root@$IP:/tmp/
-#ssh root@$IP cd /tmp \&\& chmod +x ./install_docker.sh \&\& ./install_docker.sh
+ssh root@$IP cd /tmp \&\& chmod +x ./install_docker.sh \&\& ./install_docker.sh
 
 ssh root@$IP mkdir -p /root/monitoring
 scp ./files/monitoring/docker-compose.yml root@$IP:/root/monitoring/docker-compose.yml
