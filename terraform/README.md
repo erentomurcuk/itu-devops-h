@@ -84,5 +84,14 @@ Will be accessible from the droplet ip on port 3000. On first setup, go to the f
 Dashboards are added manually, but there's a collection of "standard" dashboards on https://grafana.com/grafana/dashboards. See
 
 * [Prometheus 2.0 Overview](https://grafana.com/grafana/dashboards/3662)
+* [Node Exporter Full](https://grafana.com/grafana/dashboards/1860)
 
-After setting up a useful dashboard, consider saving its JSON Model so it can easily be recreated if the data is lost.
+After setting up a useful dashboard, consider saving its JSON Model so it can easily be recreated if the data is lost in the [dashboards folder](files/monitoring/dashboards/).
+
+At the time of writing Grafana needs these datasources:
+
+* The Prometheus server.
+
+* JSON API from 1 minitwit server.
+
+  Consider replacing this with a PostgreSQL data source.
