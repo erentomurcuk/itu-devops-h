@@ -7,6 +7,8 @@ services:
     volumes:
       - /opt/prometheus.yml:/etc/prometheus/prometheus.yml
       - /opt/prometheus:/prometheus
+    restart: always
+
   grafana:
     image: grafana/grafana-oss:8.4.3
     ports:
@@ -17,3 +19,4 @@ services:
       #- /opt/grafana/log:/var/log/grafana:rw
     environment:
       - GF_INSTALL_PLUGINS=marcusolsson-json-datasource
+    restart: always
