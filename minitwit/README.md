@@ -9,7 +9,7 @@ Uses
   https://sparkjava.com/documentation
 * Apache velocity for HTML templates:
   https://velocity.apache.org/engine/2.3/user-guide.html
-* PostgreSQL as a remote database: https://mvnrepository.com/artifact/org.postgresql/postgresql
+* PostgreSQL as a remote database: https://www.postgresql.org/docs/
 
 Project is loosely based on [this](https://sparkjava.com/tutorials/application-structure) tutorial.
 
