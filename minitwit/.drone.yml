@@ -1,0 +1,69 @@
+---
+kind: pipeline
+type: docker
+name: Minitwit server
+
+steps:
+- name: build
+  image: maven:3.8.4-openjdk-17-slim
+  commands:
+  - cd minitwit
+  - chmod +x ./control.sh
+  - ./control.sh build
+  - ls -al
+  when:
+    event:
+      include:
+      - pull_request
+
+- name: test
+  image: maven:3.8.4-openjdk-17-slim
+  commands:
+  - echo Inser tests here...
+  when:
+    event:
+      include:
+      - pull_request
+
+- name: create and push docker image
+  image: plugins/docker
+  settings:
+    registry: registry.digitalocean.com
+    username:
+      from_secret: token
+    password:
+      from_secret: token
+    repo: registry.digitalocean.com/minitwit/minitwit-server
+    tags:
+      - "latest"
+      - "${DRONE_BUILD_NUMBER}"
+    dockerfile: minitwit/Dockerfile
+    context: minitwit
+  when:
+    event:
+    - promote
+
+- name: update live docker images
+  image: alpine:3.15.0
+  environment:
+    DOCKER_USERNAME:
+      from_secret: token
+    DOCKER_PASSWORD:
+      from_secret: token
+    ROOT_PASSWORD:
+      from_secret: root_password
+    WEB_HOST:
+      "143.198.249.10"
+  commands:
+  - apk add --no-cache sshpass openssh
+  - sshpass -p "$ROOT_PASSWORD" scp -o StrictHostKeyChecking=no terraform/files/update_image.sh root@$WEB_HOST:/tmp/
+  - sshpass -p "$ROOT_PASSWORD" ssh -o StrictHostKeyChecking=no root@$WEB_HOST chmod +x /tmp/update_image.sh
+  - sshpass -p "$ROOT_PASSWORD" ssh -o StrictHostKeyChecking=no root@$WEB_HOST /tmp/update_image.sh registry.digitalocean.com/minitwit/minitwit-server $DRONE_BUILD_NUMBER $DOCKER_USERNAME $DOCKER_PASSWORD
+  when:
+    event:
+    - promote
+
+---
+
+kind: signature
+hmac: 052f7c886f8b890c47f7824a0070b5ef8c1ef0c1bc43158f008bd0e865f46826
