@@ -67,6 +67,8 @@ To only recreate some parts of the infrastructure, "taint" them with ex. `terraf
 
 * (Optional) start a build by pressing the "New Build" button and choose appropriate branch that has a `.drone.yml` in minitwit.
 
+* Change project to be protected. [Update the signature if required](https://docs.drone.io/signature/).
+
 ### Failed build
 
 Sometimes drone fails without explaination or during java installation. Try rerun it a 2-3 times before debuging it.
