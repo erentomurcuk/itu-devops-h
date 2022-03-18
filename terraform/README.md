@@ -95,3 +95,5 @@ At the time of writing Grafana needs these datasources:
 * JSON API from 1 minitwit server.
 
   Consider replacing this with a PostgreSQL data source.
+
+Consider adding a alert contact point and set up alerts.
