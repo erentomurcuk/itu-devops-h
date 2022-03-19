@@ -55,8 +55,8 @@ steps:
   - chmod +x ./snyk-linux
   - apk add libstdc++ libgcc gcompat
   - ./snyk-linux auth $SNYK_TOKEN
-  - echo ./snyk-linux container test --file=Dockerfile --username=DO_PAT --password=DO_PAT registry.digitalocean.com/minitwit/minitwit-server:$DRONE_BUILD_NUMBER
-  - ./snyk-linux container test --file=Dockerfile --username=$DO_PAT --password=$DO_PAT registry.digitalocean.com/minitwit/minitwit-server:$DRONE_BUILD_NUMBER
+  - echo ./snyk-linux container test --file=minitwit/Dockerfile --username=DO_PAT --password=DO_PAT registry.digitalocean.com/minitwit/minitwit-server:$DRONE_BUILD_NUMBER
+  - ./snyk-linux container test --file=minitwit/Dockerfile --username=$DO_PAT --password=$DO_PAT registry.digitalocean.com/minitwit/minitwit-server:$DRONE_BUILD_NUMBER
   when:
     event:
     - promote
