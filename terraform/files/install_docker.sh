@@ -7,6 +7,8 @@
 # Stop on errors
 set -e
 
+! docker version | grep " 20.10.9$" > /dev/null 2>&1 || echo "Docker is already installed" && exit 0
+
 # Uninstall existing packages
 echo "Removing any old packages"
 ! dpkg -l docker-ce || service docker stop && dpkg -P docker-ce

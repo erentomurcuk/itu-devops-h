@@ -17,6 +17,7 @@ services:
       DRONE_SERVER_PROTO: ${DRONE_SERVER_PROTO}
       DRONE_USER_FILTER: ${DRONE_USER_FILTER}
       DRONE_DATABASE_SECRET: ${DRONE_DATABASE_SECRET}
+    restart: always
 
   drone-runner-docker:
     image: drone/drone-runner-docker:1
@@ -30,6 +31,7 @@ services:
       DRONE_RPC_SECRET: ${DRONE_RPC_SECRET}
       DRONE_UI_USERNAME: ${DRONE_UI_USERNAME}
       DRONE_UI_PASSWORD: ${DRONE_UI_PASSWORD}
+    restart: always
 
 networks:
   drone:
