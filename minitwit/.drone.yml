@@ -46,7 +46,6 @@ steps:
 - name: snyk scan
   image: drone-plugins/drone-snyk
   pull: if-not-exists
-  privileged: true
   settings:
     image: registry.digitalocean.com/minitwit/minitwit-server:latest
     registry: registry.digitalocean.com
