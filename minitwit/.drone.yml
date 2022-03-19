@@ -48,6 +48,8 @@ steps:
   pull: if-not-exists
   privileged: true
   settings:
+    snyk:
+      from_secret: SNYK_TOKEN
     image: registry.digitalocean.com/minitwit/minitwit-server:latest
     registry: registry.digitalocean.com
     username:
@@ -81,4 +83,4 @@ steps:
 ---
 
 kind: signature
-hmac: bb7bd2f5a563e00bed595f24014c3183d99f4a71586938bdc432805377fac150
+hmac: 500091fe25de8b4127392e38ce585ecea5031a62fdd0d7d6c92aad1c142a5ac0
