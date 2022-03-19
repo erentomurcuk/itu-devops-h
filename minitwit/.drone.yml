@@ -51,11 +51,7 @@ steps:
     snyk:
       from_secret: SNYK_TOKEN
     image: registry.digitalocean.com/minitwit/minitwit-server:latest
-    registry: registry.digitalocean.com
-    username:
-      from_secret: token
-    password:
-      from_secret: token
+    dockerfile: minitwit/Dockerfile
   when:
     event:
     - promote
