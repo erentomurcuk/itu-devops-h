@@ -50,7 +50,7 @@ steps:
       from_secret: SNYK_TOKEN
     DO_PAT:
       from_secret: token
-    IMAGE: "registry.digitalocean.com/minitwit/minitwit-server:"
+    IMAGE: "registry.digitalocean.com/minitwit/minitwit-server"
     DOCKERFILE: minitwit/Dockerfile
   commands:
   - wget https://static.snyk.io/cli/latest/snyk-linux
@@ -85,4 +85,4 @@ steps:
 ---
 
 kind: signature
-hmac: 6541779fdaf403077cb8e51057c0c7f218945a0235d63569d0e9265b909acbf4
+hmac: 787d9b6f4041e06a44098865463a529777bf4b68f4f464bf312d523f99160595
