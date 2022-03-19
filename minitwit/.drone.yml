@@ -44,7 +44,7 @@ steps:
     - promote
 
 - name: snyk scan
-  image: drone-plugins/drone-snyk
+  image: plugins/drone-snyk:1.0.1
   pull: if-not-exists
   settings:
     image: registry.digitalocean.com/minitwit/minitwit-server:latest
