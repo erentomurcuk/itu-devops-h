@@ -12,15 +12,18 @@ public class SqlDatabase {
 
     public Connection connect() throws SQLException {
         String password = System.getenv("MINITWIT_DB_PASS");
+        String username = System.getenv("MINITWIT_DB_USER");
+        String url = System.getenv("MINITWIT_DB_URL");
 
         if (password == null) {
             throw new IllegalStateException("Password for the database is required");
+        } else if (username == null) {
+            throw new IllegalStateException("Username for the database is required");
+        } else if (url == null) {
+            throw new IllegalStateException("URL for the database is required");
         }
 
-        connection = DriverManager.getConnection(
-                "jdbc:postgresql://164.90.197.133:5432/minitwit",
-                "minitwituser", password
-        );
+        connection = DriverManager.getConnection(url, username, password);
 
         return connection;
     }

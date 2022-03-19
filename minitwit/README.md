@@ -22,3 +22,11 @@ Project is loosely based on [this](https://sparkjava.com/tutorials/application-s
 * MINITWIT_DB_PASS
 
   The password to the Postgres database.
+
+* MINITWIT_DB_USER
+
+  The username to the Postgres database.
+
+* MINITWIT_DB_URL
+
+  The URL to the Postgres database.
