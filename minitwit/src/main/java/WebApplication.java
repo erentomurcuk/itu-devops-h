@@ -12,8 +12,6 @@ import static spark.Spark.*;
 import org.apache.velocity.Template;
 
 import java.io.StringWriter;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -125,6 +123,7 @@ public class WebApplication {
         get(URLS.FOLLOW, catchRoute(WebApplication.serveFollowPage));
         get(URLS.UNFOLLOW, catchRoute(WebApplication.serveUnfollowPage));
         post(URLS.LOGIN, catchRoute(WebApplication.serveLoginPage));
+
 
         // Sim API
         path("/api", () -> {
