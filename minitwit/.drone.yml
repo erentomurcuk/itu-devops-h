@@ -55,7 +55,7 @@ steps:
   commands:
   - wget https://static.snyk.io/cli/latest/snyk-linux
   - chmod +x ./snyk-linux
-  - apk install libstdc++ libgcc gcompat
+  - apk add libstdc++ libgcc gcompat
   - ./snyk-linux auth ${SNYK_TOKEN}
   - ./snyk-linux container test --file=${DOCKERFILE} --username=${DO_PAT} --password=${DO_PAT} ${IMAGE}:${DRONE_BUILD_NUMBER}
   when:
@@ -85,4 +85,4 @@ steps:
 ---
 
 kind: signature
-hmac: 39e4ecca275f6d410b440a3f15cd1d483553143b310fadf6c4fd81adc5dd2673
+hmac: 9c94382d2c70763de1e420440f05bc4321f778733f7a7a6f4bcc148341cc29d3
