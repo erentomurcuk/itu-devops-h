@@ -54,6 +54,7 @@ steps:
       from_secret: token
     password:
       from_secret: token
+    registry: registry.digitalocean.com
     image: registry.digitalocean.com/minitwit/minitwit-server:latest
     dockerfile: minitwit/Dockerfile
   when:
@@ -83,4 +84,4 @@ steps:
 ---
 
 kind: signature
-hmac: a89aaa2efc4aa66f17ba522e85847c2bb7d1256e81b5e8cc3e4d67469ccb2bbc
+hmac: 174fea4f4cb1500f3ca02b3602223f82ee72168170b31625c015a4fadd100b8d
