@@ -50,12 +50,19 @@ steps:
       from_secret: SNYK_TOKEN
     DO_PAT:
       from_secret: token
+    DOCKER_USERNAME:
+      from_secret: token
+    DOCKER_PASSWORD:
+      from_secret: token
+    IMAGE: registry.digitalocean.com/minitwit/minitwit-server
   commands:
   - wget https://static.snyk.io/cli/latest/snyk-linux
   - chmod +x ./snyk-linux
   - apk add libstdc++ libgcc gcompat
+  - docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD" registry.digitalocean.com
+  - docker pull $IMAGE:$DRONE_BUILD_NUMBER
   - ./snyk-linux auth $SNYK_TOKEN
-  - sh -c "./snyk-linux container test -d --file=minitwit/Dockerfile --username=$DO_PAT --password=$DO_PAT registry.digitalocean.com/minitwit/minitwit-server:$DRONE_BUILD_NUMBER"
+  - ./snyk-linux container test -d --file=minitwit/Dockerfile --username=$DO_PAT --password=$DO_PAT $IMAGE:$DRONE_BUILD_NUMBER
   when:
     event:
     - promote
