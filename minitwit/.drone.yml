@@ -50,6 +50,10 @@ steps:
   settings:
     snyk:
       from_secret: SNYK_TOKEN
+    username:
+      from_secret: token
+    password:
+      from_secret: token
     image: registry.digitalocean.com/minitwit/minitwit-server:latest
     dockerfile: minitwit/Dockerfile
   when:
@@ -79,4 +83,4 @@ steps:
 ---
 
 kind: signature
-hmac: 1419741dc272a32c1527dedfcadde3393735d2c881ff7c2e7186a837f877a00b
+hmac: a89aaa2efc4aa66f17ba522e85847c2bb7d1256e81b5e8cc3e4d67469ccb2bbc
