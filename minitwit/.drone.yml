@@ -56,8 +56,8 @@ steps:
   - wget https://static.snyk.io/cli/latest/snyk-linux
   - chmod +x ./snyk-linux
   - apk add libstdc++ libgcc gcompat
-  - ./snyk-linux auth ${SNYK_TOKEN}
-  - ./snyk-linux container test --file=${DOCKERFILE} --username=${DO_PAT} --password=${DO_PAT} ${IMAGE}:${DRONE_BUILD_NUMBER}
+  - ./snyk-linux auth $SNYK_TOKEN
+  - ./snyk-linux container test --file=$DOCKERFILE --username=$DO_PAT --password=$DO_PAT $IMAGE:$DRONE_BUILD_NUMBER
   when:
     event:
     - promote
@@ -85,4 +85,4 @@ steps:
 ---
 
 kind: signature
-hmac: 9c94382d2c70763de1e420440f05bc4321f778733f7a7a6f4bcc148341cc29d3
+hmac: 6541779fdaf403077cb8e51057c0c7f218945a0235d63569d0e9265b909acbf4
