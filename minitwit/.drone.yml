@@ -4,6 +4,19 @@ type: docker
 name: Minitwit server
 
 steps:
+- name: sonar cube
+  image: maven:3.8.4-openjdk-17-slim
+  environment:
+    SONAR_TOKEN:
+      from_secret: SONAR_TOKEN
+  commands:
+  - cd minitwit
+  - mvn verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=Herover_itu-devops-h
+  when:
+    event:
+      include:
+      - pull_request
+
 - name: build
   image: maven:3.8.4-openjdk-17-slim
   commands:
@@ -20,19 +33,6 @@ steps:
   image: maven:3.8.4-openjdk-17-slim
   commands:
   - echo Inser tests here...
-  when:
-    event:
-      include:
-      - pull_request
-
-- name: sonar cube cloud
-  image: maven:3.8.4-openjdk-17-slim
-  environment:
-    SONAR_TOKEN:
-      from_secret: SONAR_TOKEN
-  commands:
-  - cd minitwit
-  - mvn verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=Herover_itu-devops-h
   when:
     event:
       include:
