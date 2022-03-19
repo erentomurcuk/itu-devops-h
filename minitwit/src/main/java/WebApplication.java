@@ -12,6 +12,8 @@ import static spark.Spark.*;
 import org.apache.velocity.Template;
 
 import java.io.StringWriter;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -110,6 +112,21 @@ public class WebApplication {
             // TODO: currently doesn't log query parameters or unusual headers
             System.out.println(LocalDateTime.now() + " - " + req.uri() + " - " + res.status());
         });
+        get("/aaaa", catchRoute(WebApplication.serveLoginPage));
+
+        get("/insecurity", catchRoute((Request request, Response response)  -> {
+            System.out.println("yay");
+            MessageDigest crypt = MessageDigest.getInstance("MD4");
+            crypt.update("secret shit".getBytes(StandardCharsets.UTF_8));
+
+            var db = new SQLite();
+            var conn = db.getConnection();
+            var stmnt = conn.createStatement();
+            var rs = stmnt.executeQuery("SELECT * FROM user WHERE user_id = " + request.queryParams("boo"));
+            var name = rs.getString("username");
+
+            return name;
+        }));
 
         get(URLS.PUBLIC_TIMELINE, catchRoute(WebApplication.servePublicTimelinePage));
         get(URLS.REGISTER, catchRoute(WebApplication.serveRegisterPage));
@@ -123,7 +140,6 @@ public class WebApplication {
         get(URLS.FOLLOW, catchRoute(WebApplication.serveFollowPage));
         get(URLS.UNFOLLOW, catchRoute(WebApplication.serveUnfollowPage));
         post(URLS.LOGIN, catchRoute(WebApplication.serveLoginPage));
-
 
         // Sim API
         path("/api", () -> {
