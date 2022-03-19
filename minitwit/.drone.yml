@@ -54,6 +54,9 @@ steps:
       from_secret: token
     password:
       from_secret: token
+  when:
+    event:
+    - promote
 
 - name: update live docker images
   image: alpine:3.15.0
