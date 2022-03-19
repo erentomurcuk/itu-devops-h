@@ -55,6 +55,9 @@ steps:
     DOCKER_PASSWORD:
       from_secret: token
     IMAGE: registry.digitalocean.com/minitwit/minitwit-server
+  volumes:
+    - name: dockersock
+      path: /var/run/docker.sock
   commands:
   - wget https://static.snyk.io/cli/latest/snyk-linux
   - chmod +x ./snyk-linux
@@ -86,6 +89,11 @@ steps:
   when:
     event:
     - promote
+
+volumes:
+  - name: dockersock
+    host:
+      path: /var/run/docker.sock
 
 ---
 
