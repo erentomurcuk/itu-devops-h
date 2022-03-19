@@ -43,6 +43,18 @@ steps:
     event:
     - promote
 
+- name: snyk scan
+  image: drone-plugins/drone-snyk
+  pull: if-not-exists
+  privileged: true
+  settings:
+    image: registry.digitalocean.com/minitwit/minitwit-server:latest
+    registry: registry.digitalocean.com
+    username:
+      from_secret: token
+    password:
+      from_secret: token
+
 - name: update live docker images
   image: alpine:3.15.0
   environment:
