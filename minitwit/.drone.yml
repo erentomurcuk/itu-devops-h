@@ -25,6 +25,18 @@ steps:
       include:
       - pull_request
 
+
+- name: semgrep scan
+  image: returntocorp/semgrep-agent:v1
+  commands:
+  - echo Test semgrep
+  when:
+    event:
+      include:
+      - pull_request
+
+
+
 - name: create and push docker image
   image: plugins/docker
   settings:
