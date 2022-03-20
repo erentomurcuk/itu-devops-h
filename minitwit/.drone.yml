@@ -29,8 +29,8 @@ steps:
 - name: semgrep scan
   image: returntocorp/semgrep-agent:v1
   commands:
-  - echo Test semgrep
-  - echo I better be able to approve this one
+  - echo Run semgrep scan
+  - semgrep-agent --baseline-ref dev
   when:
     event:
       include:
@@ -78,4 +78,4 @@ steps:
 ---
 
 kind: signature
-hmac: 6e886e58717f61757dda54b7aa291d03a7e6f8cc33cbea7fcc1b20d97b4c2ea5
+hmac: ec81e82572ca78d1d1a8f6c969e85e0338ee185740ee60b892ccb486d31da9ef
