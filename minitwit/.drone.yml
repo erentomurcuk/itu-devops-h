@@ -63,7 +63,8 @@ steps:
   - docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD" registry.digitalocean.com
   - docker pull $IMAGE:$DRONE_BUILD_NUMBER
   - ./snyk-linux auth $SNYK_TOKEN
-  - ./snyk-linux container test --file=minitwit/Dockerfile --username=$DOCKER_USERNAME --password=$DOCKER_PASSWORD $IMAGE:$DRONE_BUILD_NUMBER && res=$? || res=$?
+  # Threshold can be low|medium|high|critical, see https://support.snyk.io/hc/en-us/articles/360001040078-How-is-a-vulnerability-s-severity-determined- low is too low for us
+  - ./snyk-linux container test --severity-threshold=medium --file=minitwit/Dockerfile --username=$DOCKER_USERNAME --password=$DOCKER_PASSWORD $IMAGE:$DRONE_BUILD_NUMBER && res=$? || res=$?
   - docker rmi $IMAGE:$DRONE_BUILD_NUMBER
   - exit $res
   when:
@@ -98,4 +99,4 @@ volumes:
 ---
 
 kind: signature
-hmac: 9075a1e1e1755c68fe29f1c40fd0f3288c1c39408c3eed4eeb3d0d8c66e2661a
+hmac: 67b6333e5cbb5a87cb1ee4a8ba218f83d8c0f493a1fa5527a1be0cd583cde3bc
