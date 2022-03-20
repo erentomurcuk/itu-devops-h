@@ -30,11 +30,11 @@ steps:
   image: returntocorp/semgrep-agent:v1
   commands:
   - echo Test semgrep
+  - echo I better be able to approve this one
   when:
     event:
       include:
       - pull_request
-
 
 
 - name: create and push docker image
