@@ -30,7 +30,7 @@ steps:
   image: returntocorp/semgrep-agent:v1
   commands:
   - echo Run semgrep scan
-  - semgrep-agent --baseline-ref dev
+  - semgrep-agent --baseline-ref dev --config semgrep_rules.yml
   when:
     event:
       include:
@@ -78,4 +78,4 @@ steps:
 ---
 
 kind: signature
-hmac: ec81e82572ca78d1d1a8f6c969e85e0338ee185740ee60b892ccb486d31da9ef
+hmac: b53d2b6d9e00485de4e8be2f429c9d3e40af3b44462b82805fcc4055a03a2023
