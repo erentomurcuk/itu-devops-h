@@ -48,8 +48,6 @@ steps:
   environment:
     SNYK_TOKEN:
       from_secret: SNYK_TOKEN
-    DO_PAT:
-      from_secret: token
     DOCKER_USERNAME:
       from_secret: token
     DOCKER_PASSWORD:
@@ -65,7 +63,7 @@ steps:
   - docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD" registry.digitalocean.com
   - docker pull $IMAGE:$DRONE_BUILD_NUMBER
   - ./snyk-linux auth $SNYK_TOKEN
-  - ./snyk-linux container test --file=minitwit/Dockerfile --username=$DO_PAT --password=$DO_PAT $IMAGE:$DRONE_BUILD_NUMBER && res=$? || res=$?
+  - ./snyk-linux container test --file=minitwit/Dockerfile --username=$DOCKER_USERNAME --password=$DOCKER_PASSWORD $IMAGE:$DRONE_BUILD_NUMBER && res=$? || res=$?
   - docker rmi $IMAGE:$DRONE_BUILD_NUMBER
   - exit $res
   when:
@@ -100,4 +98,4 @@ volumes:
 ---
 
 kind: signature
-hmac: 2cb9c1005853e983e0a4fd6168045ed56c09e77c74a25422d28d482d54fbabda
+hmac: 9075a1e1e1755c68fe29f1c40fd0f3288c1c39408c3eed4eeb3d0d8c66e2661a
