@@ -1,7 +1,10 @@
 ---
 kind: pipeline
 type: docker
-name: Minitwit server
+name: Minitwit server pull request
+
+trigger:
+  event: [pull_request]
 
 steps:
 - name: build
@@ -11,20 +14,25 @@ steps:
   - chmod +x ./control.sh
   - ./control.sh build
   - ls -al
-  when:
-    event:
-      include:
-      - pull_request
 
 - name: test
   image: maven:3.8.4-openjdk-17-slim
   commands:
   - echo Inser tests here...
-  when:
-    event:
-      include:
-      - pull_request
 
+---
+
+kind: pipeline
+type: docker
+name: Minitwit server deployment
+
+trigger:
+  branch:
+  - main
+  event:
+  - push
+
+steps:
 - name: create and push docker image
   image: plugins/docker
   settings:
@@ -39,9 +47,6 @@ steps:
       - "${DRONE_BUILD_NUMBER}"
     dockerfile: minitwit/Dockerfile
     context: minitwit
-  when:
-    event:
-    - promote
 
 - name: update live docker images
   image: alpine:3.15.0
@@ -59,9 +64,6 @@ steps:
   - sshpass -p "$ROOT_PASSWORD" scp -o StrictHostKeyChecking=no terraform/files/update_image.sh root@$WEB_HOST:/tmp/
   - sshpass -p "$ROOT_PASSWORD" ssh -o StrictHostKeyChecking=no root@$WEB_HOST chmod +x /tmp/update_image.sh
   - sshpass -p "$ROOT_PASSWORD" ssh -o StrictHostKeyChecking=no root@$WEB_HOST /tmp/update_image.sh registry.digitalocean.com/minitwit/minitwit-server $DRONE_BUILD_NUMBER $DOCKER_USERNAME $DOCKER_PASSWORD
-  when:
-    event:
-    - promote
 
 - name: create github release
   image: alpine:3.15.0
@@ -79,11 +81,8 @@ steps:
   # Assume first version tag is the one we want
   - version=$(grep -Po "(?<=\<version\>)[A-Z0-9\.\-]*" minitwit/pom.xml | head -n 1)
   - gh release create $version --generate-notes
-  when:
-    event:
-    - promote
 
 ---
 
 kind: signature
-hmac: b17dec1c6dfd5f870a967eea51fe1dcf1fb1b119863718b0f1923fa75b276202
+hmac: 28f7b6f5a2cb99f8f4b02c4dea27e365ac60ca97a3707c590f9815477c87bf90
