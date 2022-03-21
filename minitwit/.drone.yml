@@ -63,7 +63,26 @@ steps:
     event:
     - promote
 
+- name: create github release
+  image: alpine:3.15.0
+  environment:
+    GH_TOKEN:
+      from_secret: GH_TOKEN
+  commands:
+  # Install grep with support for P flag not available in bundled grep
+  - apk add --no-cache git grep
+  - wget https://github.com/cli/cli/releases/download/v2.6.0/gh_2.6.0_linux_amd64.tar.gz
+  - tar xvfz gh_2.6.0_linux_amd64.tar.gz
+  - cp gh_2.6.0_linux_amd64/bin/gh /usr/local/bin/gh
+  - echo $GH_TOKEN | gh auth --with-token
+  # Assume first version tag is the one we want
+  - version=$(grep -Po "(?<=\<version\>)[A-Z0-9\.\-]*" minitwit/pom.xml | head -n 1)
+  - gh release create $version --generate-notes
+  when:
+    event:
+    - promote
+
 ---
 
 kind: signature
-hmac: 052f7c886f8b890c47f7824a0070b5ef8c1ef0c1bc43158f008bd0e865f46826
+hmac: e90dcd77cad03daadffd5108d8dc73287ab1d000c85ef4a0721e9e73b3c518f2
