@@ -74,7 +74,7 @@ steps:
   - wget https://github.com/cli/cli/releases/download/v2.6.0/gh_2.6.0_linux_amd64.tar.gz
   - tar xvfz gh_2.6.0_linux_amd64.tar.gz
   - cp gh_2.6.0_linux_amd64/bin/gh /usr/local/bin/gh
-  - echo $GH_TOKEN | gh auth --with-token
+  - echo $GH_TOKEN | gh auth login --with-token
   # Assume first version tag is the one we want
   - version=$(grep -Po "(?<=\<version\>)[A-Z0-9\.\-]*" minitwit/pom.xml | head -n 1)
   - gh release create $version --generate-notes
@@ -85,4 +85,4 @@ steps:
 ---
 
 kind: signature
-hmac: e90dcd77cad03daadffd5108d8dc73287ab1d000c85ef4a0721e9e73b3c518f2
+hmac: 9e960f489c5555585a903c998eccc96928a19a92f1bc884141748880d8691508
