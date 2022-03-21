@@ -75,7 +75,7 @@ steps:
   - tar xvfz gh_2.6.0_linux_amd64.tar.gz
   - cp gh_2.6.0_linux_amd64/bin/gh /usr/local/bin/gh
   # True is added so we can ignore env var warning
-  - echo $GH_TOKEN | gh auth login --with-token ; true
+  - echo $GH_TOKEN | gh auth login --with-token || true
   # Assume first version tag is the one we want
   - version=$(grep -Po "(?<=\<version\>)[A-Z0-9\.\-]*" minitwit/pom.xml | head -n 1)
   - gh release create $version --generate-notes
@@ -86,4 +86,4 @@ steps:
 ---
 
 kind: signature
-hmac: edc41846ec6f11413854d24326704567657c60ab12747ebc3620db51ab63feb4
+hmac: b17dec1c6dfd5f870a967eea51fe1dcf1fb1b119863718b0f1923fa75b276202
