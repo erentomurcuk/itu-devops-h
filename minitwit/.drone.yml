@@ -30,8 +30,7 @@ steps:
   image: returntocorp/semgrep-agent:v1
   commands:
   - echo Run semgrep scan
-  - semgrep-agent --config p/security-audit --config p/secrets
-  - echo semgrep-agent --baseline-ref dev --config semgrep_rules.yml --include minitwit/src
+  - semgrep-agent --baseline-ref dev --config p/security-audit --config p/secrets
   when:
     event:
       include:
@@ -79,4 +78,4 @@ steps:
 ---
 
 kind: signature
-hmac: 4f7745469069c9189b43a772cb6201e282f46a101f3008574a9dfd0c1f22a590
+hmac: 3c0a64af07e82ce70bccbea6d198be68a2b9f4547acdb0b0b46401b3cb0f342a
