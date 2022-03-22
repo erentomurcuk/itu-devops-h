@@ -29,8 +29,7 @@ steps:
 - name: semgrep scan
   image: returntocorp/semgrep-agent:v1
   commands:
-  - echo Run semgrep scan
-  - semgrep-agent --baseline-ref dev --config p/security-audit --config p/secrets
+  - semgrep-agent --baseline-ref main --config p/security-audit --config p/secrets
   when:
     event:
       include:
@@ -78,4 +77,4 @@ steps:
 ---
 
 kind: signature
-hmac: 3c0a64af07e82ce70bccbea6d198be68a2b9f4547acdb0b0b46401b3cb0f342a
+hmac: 453c142ecc492bd73f493220a6dac6e85af733b743af37e968c752d40a3d8481
