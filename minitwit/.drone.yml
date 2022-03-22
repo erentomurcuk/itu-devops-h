@@ -11,7 +11,7 @@ steps:
   image: returntocorp/semgrep-agent:v1
   commands:
   - echo Run semgrep scan
-  - semgrep-agent --baseline-ref main --config p/security-audit --config p/secrets
+  - semgrep-agent --config p/secrets
 
 - name: sonar cube
   image: maven:3.8.4-openjdk-17-slim
@@ -133,4 +133,4 @@ volumes:
 ---
 
 kind: signature
-hmac: 44f75e354260718b825e04e40fa89b36e693af6f51d124c370b272b9a71409a6
+hmac: 243f59fccdf1b4585d5c865cfe6a7202abcc2f72c3232f3d18f0e424f5e3e166
