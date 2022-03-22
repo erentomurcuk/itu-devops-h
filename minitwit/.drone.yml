@@ -11,11 +11,6 @@ steps:
   image: returntocorp/semgrep-agent:v1
   commands:
   - echo Run semgrep scan
-  - semgrep-agent --baseline-ref dev --config p/security-audit --config p/secrets
-  when:
-    event:
-      include:
-      - pull_request
 
 - name: sonar cube
   image: maven:3.8.4-openjdk-17-slim
@@ -25,10 +20,6 @@ steps:
   commands:
   - cd minitwit
   - mvn verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=Herover_itu-devops-h
-  when:
-    event:
-      include:
-      - pull_request
 
 - name: build
   image: maven:3.8.4-openjdk-17-slim
@@ -141,4 +132,4 @@ volumes:
 ---
 
 kind: signature
-hmac: 85db8e1e514abc4fd1eb7a098ce20da105cff0c935fe9e4efce3463119b1d830
+hmac: c3ded3393a744e033e0cdb5278f886a7f56d05362b38cdccc89ba258c3446de2
