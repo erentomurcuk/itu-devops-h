@@ -99,7 +99,6 @@ public class WebApplication {
 
     public static void main(String[] args) {
         System.out.println("Hello Minitwit");
-        System.out.println("This print statement should be found by Semgrep");
 
         var port = System.getenv("MINITWIT_PORT");
         if (port == null) {
