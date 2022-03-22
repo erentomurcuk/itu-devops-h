@@ -7,6 +7,29 @@ trigger:
   event: [pull_request]
 
 steps:
+- name: semgrep scan
+  image: returntocorp/semgrep-agent:v1
+  commands:
+  - echo Run semgrep scan
+  - semgrep-agent --baseline-ref dev --config p/security-audit --config p/secrets
+  when:
+    event:
+      include:
+      - pull_request
+
+- name: sonar cube
+  image: maven:3.8.4-openjdk-17-slim
+  environment:
+    SONAR_TOKEN:
+      from_secret: SONAR_TOKEN
+  commands:
+  - cd minitwit
+  - mvn verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=Herover_itu-devops-h
+  when:
+    event:
+      include:
+      - pull_request
+
 - name: build
   image: maven:3.8.4-openjdk-17-slim
   commands:
@@ -48,6 +71,34 @@ steps:
     dockerfile: minitwit/Dockerfile
     context: minitwit
 
+- name: snyk scan
+  image: docker
+  environment:
+    SNYK_TOKEN:
+      from_secret: SNYK_TOKEN
+    DOCKER_USERNAME:
+      from_secret: token
+    DOCKER_PASSWORD:
+      from_secret: token
+    IMAGE: registry.digitalocean.com/minitwit/minitwit-server
+  volumes:
+    - name: dockersock
+      path: /var/run/docker.sock
+  commands:
+  - wget https://static.snyk.io/cli/latest/snyk-linux
+  - chmod +x ./snyk-linux
+  - apk add libstdc++ libgcc gcompat
+  - docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD" registry.digitalocean.com
+  - docker pull $IMAGE:$DRONE_BUILD_NUMBER
+  - ./snyk-linux auth $SNYK_TOKEN
+  # Threshold can be low|medium|high|critical, see https://support.snyk.io/hc/en-us/articles/360001040078-How-is-a-vulnerability-s-severity-determined- low is too low for us
+  - ./snyk-linux container test --app-vulns --nested-jars-depth=3 --severity-threshold=medium --file=minitwit/Dockerfile --username=$DOCKER_USERNAME --password=$DOCKER_PASSWORD $IMAGE:$DRONE_BUILD_NUMBER && res=$? || res=$?
+  - docker rmi $IMAGE:$DRONE_BUILD_NUMBER
+  - exit $res
+  when:
+    event:
+    - promote
+
 - name: update live docker images
   image: alpine:3.15.0
   environment:
@@ -82,7 +133,12 @@ steps:
   - version=$(grep -Po "(?<=\<version\>)[A-Z0-9\.\-]*" minitwit/pom.xml | head -n 1)
   - gh release create $version --generate-notes
 
+volumes:
+  - name: dockersock
+    host:
+      path: /var/run/docker.sock
+
 ---
 
 kind: signature
-hmac: 28f7b6f5a2cb99f8f4b02c4dea27e365ac60ca97a3707c590f9815477c87bf90
+hmac: 85db8e1e514abc4fd1eb7a098ce20da105cff0c935fe9e4efce3463119b1d830
