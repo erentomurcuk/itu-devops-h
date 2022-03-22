@@ -12,10 +12,6 @@ steps:
   commands:
   - echo Run semgrep scan
   - semgrep-agent --baseline-ref main --config p/security-audit --config p/secrets
-  when:
-    event:
-      include:
-      - pull_request
 
 - name: sonar cube
   image: maven:3.8.4-openjdk-17-slim
@@ -25,10 +21,6 @@ steps:
   commands:
   - cd minitwit
   - mvn verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=Herover_itu-devops-h
-  when:
-    event:
-      include:
-      - pull_request
 
 - name: build
   image: maven:3.8.4-openjdk-17-slim
@@ -42,10 +34,8 @@ steps:
   image: maven:3.8.4-openjdk-17-slim
   commands:
   - echo Inser tests here...
-  when:
-    event:
-      include:
-      - pull_request
+
+---
 
 kind: pipeline
 type: docker
@@ -143,4 +133,4 @@ volumes:
 ---
 
 kind: signature
-hmac: 453c142ecc492bd73f493220a6dac6e85af733b743af37e968c752d40a3d8481
+hmac: 44f75e354260718b825e04e40fa89b36e693af6f51d124c370b272b9a71409a6
