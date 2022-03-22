@@ -1,0 +1,22 @@
+version: '2'
+services:
+  prometheus:
+    image: prom/prometheus:v2.33.5
+    ports:
+      - 9090:9090
+    volumes:
+      - /opt/prometheus.yml:/etc/prometheus/prometheus.yml
+      - /opt/prometheus:/prometheus
+    restart: always
+
+  grafana:
+    image: grafana/grafana-oss:8.4.3
+    ports:
+      - 3000:3000
+    volumes:
+      - /opt/grafana/lib:/var/lib/grafana:rw
+      #- /opt/grafana/etc:/etc/grafana:rw
+      #- /opt/grafana/log:/var/log/grafana:rw
+    environment:
+      - GF_INSTALL_PLUGINS=marcusolsson-json-datasource
+    restart: always

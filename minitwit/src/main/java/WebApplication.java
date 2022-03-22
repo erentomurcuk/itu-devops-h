@@ -1,4 +1,5 @@
-import com.google.gson.GsonBuilder;
+import Metrics.PrometheusMetrics;
+import Metrics.TimerStopper;
 import com.google.gson.annotations.SerializedName;
 import com.google.gson.Gson;
 import com.timgroup.jgravatar.Gravatar;
@@ -22,6 +23,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 public class WebApplication {
 
@@ -81,6 +83,8 @@ public class WebApplication {
 
     public static Gson gson = new Gson();
 
+    public static PrometheusMetrics metrics = new PrometheusMetrics();
+
     // The ID of the latest request made by the simulator
     public static int LATEST = 0;
 
@@ -88,6 +92,10 @@ public class WebApplication {
             .setSize(48)
             .setRating(GravatarRating.GENERAL_AUDIENCES)
             .setDefaultImage(GravatarDefaultImage.IDENTICON);
+
+    private static final String METRIC_TYPE_WEB = "web";
+    private static final String METRIC_TYPE_API = "api";
+    private static final String METRIC_TYPE_METRICS = "metrics";
 
     public static void main(String[] args) {
         System.out.println("Hello Minitwit");
@@ -101,6 +109,10 @@ public class WebApplication {
         staticFiles.location("/static");
 
         before("/*", (req, res) -> {
+            req.attribute("metrics", metrics);
+            if (!req.uri().startsWith("/static")) {
+                req.attribute("startTime", System.nanoTime());
+            }
             // Setup initial session state once
             if (req.session().isNew()) {
                 req.session().attribute("alerts", new ArrayList<>());
@@ -108,38 +120,68 @@ public class WebApplication {
         });
 
         after("/*", (req, res) -> {
+            long startTime = req.attribute("startTime");
+            if (startTime != 0) {
+                long time = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime);
+                metrics.observeRequestTime(
+                        time,
+                        req.uri().startsWith("/api")
+                                ? METRIC_TYPE_API
+                                : req.uri().startsWith("/metrics") ? METRIC_TYPE_METRICS : METRIC_TYPE_WEB,
+                        res.status()
+                );
+            }
             // TODO: currently doesn't log query parameters or unusual headers
             System.out.println(LocalDateTime.now() + " - " + req.uri() + " - " + res.status());
         });
 
-        get(URLS.PUBLIC_TIMELINE, WebApplication.servePublicTimelinePage);
-        get(URLS.REGISTER, WebApplication.serveRegisterPage);
-        get(URLS.LOGIN, WebApplication.serveLoginPage);
-        get(URLS.LOGOUT, WebApplication.handleLogoutRequest);
-        get(URLS.USER, WebApplication.serveUserTimelinePage);
-        get(URLS.USER_TIMELINE, WebApplication.serveUserByUsernameTimelinePage);
+        //before("/metrics", protectEndpoint("Basic asdf"));
+        get("/metrics", catchRoute(WebApplication.serveMetrics));
+        get("/metrics/stats", catchRoute(WebApplication.serveStats), gson::toJson);
 
-        post(URLS.REGISTER, WebApplication.serveRegisterPage);
-        post(URLS.ADD_MESSAGE, WebApplication.add_message);
-        get(URLS.FOLLOW, WebApplication.serveFollowPage);
-        get(URLS.UNFOLLOW, WebApplication.serveUnfollowPage);
-        post(URLS.LOGIN, WebApplication.serveLoginPage);
+        get(URLS.PUBLIC_TIMELINE, catchRoute(WebApplication.servePublicTimelinePage));
+        get(URLS.REGISTER, catchRoute(WebApplication.serveRegisterPage));
+        get(URLS.LOGIN, catchRoute(WebApplication.serveLoginPage));
+        get(URLS.LOGOUT, catchRoute(WebApplication.handleLogoutRequest));
+        get(URLS.USER, catchRoute(WebApplication.serveUserTimelinePage));
+        get(URLS.USER_TIMELINE, catchRoute(WebApplication.serveUserByUsernameTimelinePage));
+
+        post(URLS.REGISTER, catchRoute(WebApplication.serveRegisterPage));
+        post(URLS.ADD_MESSAGE, catchRoute(WebApplication.add_message));
+        get(URLS.FOLLOW, catchRoute(WebApplication.serveFollowPage));
+        get(URLS.UNFOLLOW, catchRoute(WebApplication.serveUnfollowPage));
+        post(URLS.LOGIN, catchRoute(WebApplication.serveLoginPage));
 
 
         // Sim API
         path("/api", () -> {
             // All endpoints in this path must be authenticated
-            before("/*", protectEndpoint);
+            // Auth code is simulator:super_safe!
+            before("/*", protectEndpoint("Basic c2ltdWxhdG9yOnN1cGVyX3NhZmUh"));
 
-            get(URLS.SIM_MESSAGES, WebApplication.serveSimMsgs, gson::toJson);
-            post(URLS.SIM_REGISTER, WebApplication.serveSimRegister); // Handles JSON on its own
-            get(URLS.SIM_LATEST, WebApplication.serveSimLatest, gson::toJson);
-            get(URLS.SIM_MSGS_USR, WebApplication.serveSimMsgsUsr, gson::toJson);
-            post(URLS.SIM_MSGS_USR, WebApplication.serveSimMsgsUsr, gson::toJson);
-            post(URLS.SIM_FLLWS, WebApplication.serveSimFllws);
-            get(URLS.SIM_FLLWS, WebApplication.serveSimFllws);
+            get(URLS.SIM_MESSAGES, catchRoute(WebApplication.serveSimMsgs), gson::toJson);
+            post(URLS.SIM_REGISTER, catchRoute(WebApplication.serveSimRegister)); // Handles JSON on its own
+            get(URLS.SIM_LATEST, catchRoute(WebApplication.serveSimLatest), gson::toJson);
+            get(URLS.SIM_MSGS_USR, catchRoute(WebApplication.serveSimMsgsUsr), gson::toJson);
+            post(URLS.SIM_MSGS_USR, catchRoute(WebApplication.serveSimMsgsUsr), gson::toJson);
+            post(URLS.SIM_FLLWS, catchRoute(WebApplication.serveSimFllws));
+            get(URLS.SIM_FLLWS, catchRoute(WebApplication.serveSimFllws));
         });
 
+    }
+
+    public static Route catchRoute(Route r) {
+        Route catcher = (Request request, Response response) -> {
+            try {
+                return r.handle(request, response);
+            } catch (Exception e) {
+                response.status(500);
+                e.printStackTrace();
+                return e.toString();
+            }
+        };
+
+        return catcher;
     }
 
     public static ResultSet getUser(Connection conn, Integer userId) throws SQLException {
@@ -200,51 +242,44 @@ public class WebApplication {
     }
 
     public static String render(Session session, Map<String, Object> model, String templatePath) {
-        try {
-            VelocityEngine engine = new VelocityEngine();
-            // Required for Velocity to know where resources ends up
-            engine.setProperty("resource.loader", "class");
-            engine.setProperty("class.resource.loader.class","org.apache.velocity.runtime.resource.loader.ClasspathResourceLoader");
+        VelocityEngine engine = new VelocityEngine();
+        // Required for Velocity to know where resources ends up
+        engine.setProperty("resource.loader", "class");
+        engine.setProperty("class.resource.loader.class","org.apache.velocity.runtime.resource.loader.ClasspathResourceLoader");
 
-            engine.init();
+        engine.init();
 
-            Template template = engine.getTemplate(templatePath);
+        Template template = engine.getTemplate(templatePath);
 
-            // Set up variables available in templates
-            VelocityContext ctx = new VelocityContext(model);
-            ctx.put("webapp", WebApplication.class);
-            ctx.put("urls", WebApplication.URLS.class);     //I think this is redundant no?
-            //This is the easiest way I could insert constants into the context. Maybe not elegant, but it works.
-            ctx.put("USER", URLS.USER);
-            ctx.put("LOGIN", URLS.LOGIN);
-            ctx.put("LOGOUT", URLS.LOGOUT);
-            ctx.put("PUBLIC_TIMELINE", URLS.PUBLIC_TIMELINE);
-            ctx.put("USER_TIMELINE", URLS.USER_TIMELINE);
-            ctx.put("REGISTER",URLS.REGISTER);
-            ctx.put("ADD_MESSAGE", URLS.ADD_MESSAGE);
-            ctx.put("FOLLOW",URLS.FOLLOW);
-            ctx.put("UNFOLLOW", URLS.UNFOLLOW);
-            model.forEach((k, v) -> ctx.put(k, v));         //I think this might also be redundant
+        // Set up variables available in templates
+        VelocityContext ctx = new VelocityContext(model);
+        ctx.put("webapp", WebApplication.class);
+        ctx.put("urls", WebApplication.URLS.class);     //I think this is redundant no?
+        //This is the easiest way I could insert constants into the context. Maybe not elegant, but it works.
+        ctx.put("USER", URLS.USER);
+        ctx.put("LOGIN", URLS.LOGIN);
+        ctx.put("LOGOUT", URLS.LOGOUT);
+        ctx.put("PUBLIC_TIMELINE", URLS.PUBLIC_TIMELINE);
+        ctx.put("USER_TIMELINE", URLS.USER_TIMELINE);
+        ctx.put("REGISTER",URLS.REGISTER);
+        ctx.put("ADD_MESSAGE", URLS.ADD_MESSAGE);
+        ctx.put("FOLLOW",URLS.FOLLOW);
+        ctx.put("UNFOLLOW", URLS.UNFOLLOW);
+        model.forEach((k, v) -> ctx.put(k, v));         //I think this might also be redundant
 
-            ctx.put("date", new DateTool());
+        ctx.put("date", new DateTool());
 
-            ctx.put("alerts", session.attribute("alerts"));
+        ctx.put("alerts", session.attribute("alerts"));
 
-            if (!ctx.containsKey("title")) {
-                ctx.put("title", "Welcome");
-            }
-
-            // "Run" template and return result
-            StringWriter writer = new StringWriter();
-            template.merge(ctx, writer);
-            return writer.toString();
-        } catch (Exception e) {
-            // If a error happens above, print it and return it as a response
-            e.printStackTrace();
-            return e.toString();
-        } finally {
-            ((List<String>) session.attribute("alerts")).clear();
+        if (!ctx.containsKey("title")) {
+            ctx.put("title", "Welcome");
         }
+
+        // "Run" template and return result
+        StringWriter writer = new StringWriter();
+        template.merge(ctx, writer);
+        ((List<String>) session.attribute("alerts")).clear();
+        return writer.toString();
     }
 
     private static void addAlert(Session session, String message) {
@@ -305,39 +340,34 @@ public class WebApplication {
     public static Route add_message = (Request request, Response response)  -> {
         Map<String, Object> model = new HashMap<>();
 
-        try {
-            if (request.session().attribute("user_id") == null) {
-                response.status(401);
-                return "Unauthorised";
-            }
-
-            var db = new SQLite();
-            var conn = db.getConnection();
-
-            var insert = conn.prepareStatement(
-                "insert into message (author_id, text, pub_date, flagged)\n" +
-                    "            values (?, ?, ?, 0)");
-
-            long unixTime = System.currentTimeMillis() / 1000L;
-
-            insert.setInt(1, request.session().attribute("user_id"));
-            insert.setString(2, request.queryParams("text"));
-            insert.setLong(3, unixTime);
-
-            insert.execute();
-
-            conn.close();
+        if (request.session().attribute("user_id") == null) {
+            response.status(401);
+            return "Unauthorised";
         }
 
-        catch (Exception e) {
-            e.printStackTrace();
-            return e.toString();
+        var db = new SQLite();
+        var conn = db.getConnection();
 
-        }
+        var insert = conn.prepareStatement(
+            "insert into message (author_id, text, pub_date, flagged)\n" +
+                "            values (?, ?, ?, 0)");
+
+        long unixTime = System.currentTimeMillis() / 1000L;
+
+        insert.setInt(1, request.session().attribute("user_id"));
+        insert.setString(2, request.queryParams("text"));
+        insert.setLong(3, unixTime);
+
+        insert.execute();
+
+        conn.close();
 
         addAlert(request.session(), "Your message was recorded");
 
         response.redirect(URLS.USER, 303);
+
+        PrometheusMetrics metrics = request.attribute("metrics");
+        metrics.incrementMessages(METRIC_TYPE_WEB);
 
         return "";
     };
@@ -345,42 +375,39 @@ public class WebApplication {
     public static Route serveFollowPage = (Request request, Response response) -> {
         var db = new SQLite();
         var conn = db.getConnection();
-        try {
 
-            var insert = conn.prepareStatement("insert into follower (\n" +
-                    "                who_id, whom_id) values (?, ?)");
+        var insert = conn.prepareStatement("insert into follower (\n" +
+                "                who_id, whom_id) values (?, ?)");
 
-            Integer currentUserID = request.session().attribute("user_id");
-            if (currentUserID == null) {
-                response.status(401);
-                return "";
-            }
-
-            var whom_id = getUserID(db, request.params(":username"));
-
-            if (whom_id == 0) {
-                response.status(404);
-                return "";
-            }
-
-            insert.setInt(1, currentUserID);
-            insert.setInt(2, whom_id);
-            insert.execute();
-
-            conn.close();
-
-            response.redirect(URLS.urlFor(URLS.USER_TIMELINE, Map.ofEntries(
-                    Map.entry("username", request.params(":username"))
-            )));
-
-            addAlert(request.session(), "You are now following " + request.params(":username"));
-
+        Integer currentUserID = request.session().attribute("user_id");
+        if (currentUserID == null) {
+            response.status(401);
             return "";
-        } catch (Exception e) {
-            conn.close();
-            e.printStackTrace();
-            return e.toString();
         }
+
+        var whom_id = getUserID(db, request.params(":username"));
+
+        if (whom_id == 0) {
+            response.status(404);
+            return "";
+        }
+
+        insert.setInt(1, currentUserID);
+        insert.setInt(2, whom_id);
+        insert.execute();
+
+        conn.close();
+
+        response.redirect(URLS.urlFor(URLS.USER_TIMELINE, Map.ofEntries(
+                Map.entry("username", request.params(":username"))
+        )));
+
+        addAlert(request.session(), "You are now following " + request.params(":username"));
+
+        PrometheusMetrics metrics = request.attribute("metrics");
+        metrics.incrementFollows(METRIC_TYPE_WEB);
+
+        return "";
     };
 
     public static Route serveUnfollowPage = (Request request, Response response) -> {
@@ -403,6 +430,9 @@ public class WebApplication {
         response.redirect(URLS.urlFor(URLS.USER_TIMELINE, Map.ofEntries(
                 Map.entry("username", request.params(":username"))
         )));
+
+        PrometheusMetrics metrics = request.attribute("metrics");
+        metrics.incrementUnfollows(METRIC_TYPE_API);
 
         return "";
     };
@@ -445,6 +475,10 @@ public class WebApplication {
             conn.close();
 
             response.status(204);
+
+            PrometheusMetrics metrics = request.attribute("metrics");
+            metrics.incrementFollows(METRIC_TYPE_API);
+
             return "";
 
         }
@@ -468,6 +502,10 @@ public class WebApplication {
             conn.close();
 
             response.status(204);
+
+            PrometheusMetrics metrics = request.attribute("metrics");
+            metrics.incrementUnfollows(METRIC_TYPE_API);
+
             return "";
         }
 
@@ -527,30 +565,25 @@ public class WebApplication {
 
 
     public static Route servePublicTimelinePage = (Request request, Response response) -> {
-        try {
-            Map<String, Object> model = new HashMap<>();
+        Map<String, Object> model = new HashMap<>();
 
-            var db = new SQLite();
-            var conn = db.getConnection();
+        var db = new SQLite();
+        var conn = db.getConnection();
 
-            var userID = (Integer) request.session().attribute("user_id");
-            var loggedInUser = getUser(conn, (userID));
-            if (loggedInUser != null) model.put("user", loggedInUser.getString("username"));
+        var userID = (Integer) request.session().attribute("user_id");
+        var loggedInUser = getUser(conn, (userID));
+        if (loggedInUser != null) model.put("user", loggedInUser.getString("username"));
 
-            // Where does this come from in python?
-            model.put("title", "Public Timeline");
-            model.put("login", URLS.LOGIN);
+        // Where does this come from in python?
+        model.put("title", "Public Timeline");
+        model.put("login", URLS.LOGIN);
 
-            var messages = getMessages();
-            model.put("messages", messages);
+        var messages = getMessages();
+        model.put("messages", messages);
 
-            conn.close();
+        conn.close();
 
-            return WebApplication.render(request.session(), model, WebApplication.Templates.PUBLIC_TIMELINE);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return e.toString();
-        }
+        return WebApplication.render(request.session(), model, WebApplication.Templates.PUBLIC_TIMELINE);
     };
 
     public static Route serveUserTimelinePage = (Request request, Response response) -> {
@@ -605,127 +638,120 @@ public class WebApplication {
     };
 
     public static Route serveUserByUsernameTimelinePage = (Request request, Response response) -> {
-        try {
-            Map<String, Object> model = new HashMap<>();
+        Map<String, Object> model = new HashMap<>();
 
-            var db = new SQLite();
-            var conn = db.getConnection();
+        var db = new SQLite();
+        var conn = db.getConnection();
 
-            var userID = (Integer) request.session().attribute("user_id");
-            var loggedInUser = getUser(conn, (userID));
-            if (loggedInUser != null) {
-                model.put("user", loggedInUser.getString("username"));
-                model.put("user_id", loggedInUser.getInt("user_id"));
-            }
+        var userID = (Integer) request.session().attribute("user_id");
+        var loggedInUser = getUser(conn, (userID));
+        if (loggedInUser != null) {
+            model.put("user", loggedInUser.getString("username"));
+            model.put("user_id", loggedInUser.getInt("user_id"));
+        }
 
-            model.put("endpoint", URLS.USER_TIMELINE);
+        model.put("endpoint", URLS.USER_TIMELINE);
 
-            var profileStmt = conn.prepareStatement(
-                    "select * from user where username = ?"
-            );
-            profileStmt.setString(1, request.params(":username"));
-            var profileRs = profileStmt.executeQuery();
-            if (profileRs.isClosed()) {
-                response.status(404);
-                conn.close();
-                return "404"; // TODO: What does the old one do?
-            }
-            var profileUser = new HashMap<String, Object>();
-            profileUser.put("user_id", profileRs.getInt("user_id"));
-            profileUser.put("username", profileRs.getString("username"));
-            profileUser.put("email", profileRs.getString("email"));
-            model.put("profile_user", profileUser);
-            profileRs.close();
+        var profileStmt = conn.prepareStatement(
+                "select * from user where username = ?"
+        );
+        profileStmt.setString(1, request.params(":username"));
+        var profileRs = profileStmt.executeQuery();
+        if (profileRs.isClosed()) {
+            response.status(404);
+            conn.close();
+            return "404"; // TODO: What does the old one do?
+        }
+        var profileUser = new HashMap<String, Object>();
+        profileUser.put("user_id", profileRs.getInt("user_id"));
+        profileUser.put("username", profileRs.getString("username"));
+        profileUser.put("email", profileRs.getString("email"));
+        model.put("profile_user", profileUser);
+        profileRs.close();
 
-            model.put("title", profileUser.get("username") + "'s Timeline");
+        model.put("title", profileUser.get("username") + "'s Timeline");
 
-            if (userID != null) {
-                var followedStmt = conn.prepareStatement("select 1 from follower where\n" +
-                        "follower.who_id = ? and follower.whom_id = ?");
-                followedStmt.setInt(1, userID);
-                followedStmt.setInt(2, (Integer) profileUser.get("user_id"));
-                var followedRs = followedStmt.executeQuery();
-                if (!followedRs.isClosed()) {
-                    model.put("followed", true);
-                } else {
-                    model.put("followed", false);
-                }
+        if (userID != null) {
+            var followedStmt = conn.prepareStatement("select 1 from follower where\n" +
+                    "follower.who_id = ? and follower.whom_id = ?");
+            followedStmt.setInt(1, userID);
+            followedStmt.setInt(2, (Integer) profileUser.get("user_id"));
+            var followedRs = followedStmt.executeQuery();
+            if (!followedRs.isClosed()) {
+                model.put("followed", true);
             } else {
                 model.put("followed", false);
             }
-
-            var messageStmt = conn.prepareStatement(
-                    "select message.*, user.* from message, user where\n" +
-                            "            user.user_id = message.author_id and user.user_id = ?\n" +
-                            "            order by message.pub_date desc limit ?");
-            messageStmt.setInt(1, (int) profileUser.get("user_id"));
-            messageStmt.setInt(2, PER_PAGE);
-            var messages = new ArrayList<HashMap<String, Object>>();
-            var messageRs = messageStmt.executeQuery();
-            while (messageRs.next()) {
-                HashMap<String, Object> result = new HashMap<>();
-                result.put("message_id", messageRs.getInt("message_id"));
-                result.put("author_id", messageRs.getInt("author_id"));
-                result.put("text", messageRs.getString("text"));
-                result.put("pub_date", messageRs.getString("pub_date")); // Type?
-                result.put("flagged", messageRs.getInt("flagged"));
-                result.put("username", messageRs.getString("username"));
-                result.put("email", messageRs.getString("email"));
-                messages.add(result);
-            }
-            model.put("messages", messages);
-
-            conn.close();
-
-            return WebApplication.render(request.session(), model, WebApplication.Templates.PUBLIC_TIMELINE);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return e.toString();
+        } else {
+            model.put("followed", false);
         }
+
+        var messageStmt = conn.prepareStatement(
+                "select message.*, user.* from message, user where\n" +
+                        "            user.user_id = message.author_id and user.user_id = ?\n" +
+                        "            order by message.pub_date desc limit ?");
+        messageStmt.setInt(1, (int) profileUser.get("user_id"));
+        messageStmt.setInt(2, PER_PAGE);
+        var messages = new ArrayList<HashMap<String, Object>>();
+        var messageRs = messageStmt.executeQuery();
+        while (messageRs.next()) {
+            HashMap<String, Object> result = new HashMap<>();
+            result.put("message_id", messageRs.getInt("message_id"));
+            result.put("author_id", messageRs.getInt("author_id"));
+            result.put("text", messageRs.getString("text"));
+            result.put("pub_date", messageRs.getString("pub_date")); // Type?
+            result.put("flagged", messageRs.getInt("flagged"));
+            result.put("username", messageRs.getString("username"));
+            result.put("email", messageRs.getString("email"));
+            messages.add(result);
+        }
+        model.put("messages", messages);
+
+        conn.close();
+
+        return WebApplication.render(request.session(), model, WebApplication.Templates.PUBLIC_TIMELINE);
     };
 
     public static Route serveRegisterPage = (Request request, Response response) -> {
         Map<String, Object> model = new HashMap<>();
-        try {
 
-            var db = new SQLite();
-            var conn = db.getConnection();
-            var insert = conn.prepareStatement("insert into user (\n" +
-                    "username, email, pw_hash) values (?, ?, ?)");
+        var db = new SQLite();
+        var conn = db.getConnection();
+        var insert = conn.prepareStatement("insert into user (\n" +
+                "username, email, pw_hash) values (?, ?, ?)");
 
-            // TODO: Get logged in user (if any)
-            // if (userIsLoggedIn) {
-            //     response.redirect(URLS.LOGIN);
-            //     return;
-            // }
+        // TODO: Get logged in user (if any)
+        // if (userIsLoggedIn) {
+        //     response.redirect(URLS.LOGIN);
+        //     return;
+        // }
 
-            model.put("messages", new ArrayList<String>() {});
-            model.put("username", request.queryParams("username") == null ? "" : request.queryParams("username"));
-            model.put("email", request.queryParams("email") == null ? "" : request.queryParams("email"));
-            model.put("title", "Sign Up");
+        model.put("messages", new ArrayList<String>() {});
+        model.put("username", request.queryParams("username") == null ? "" : request.queryParams("username"));
+        model.put("email", request.queryParams("email") == null ? "" : request.queryParams("email"));
+        model.put("title", "Sign Up");
 
-            if (request.requestMethod().equals("POST")) {
-                var username = request.queryParams("username");
-                var email = request.queryParams("email");
-                var password = request.queryParams("password");
-                var password2 = request.queryParams("password2");
+        if (request.requestMethod().equals("POST")) {
+            var username = request.queryParams("username");
+            var email = request.queryParams("email");
+            var password = request.queryParams("password");
+            var password2 = request.queryParams("password2");
 
-                var error = register(username, email, password, password2);
-                if (error != null) {
-                    model.put("error", error);
-                } else {
-                    addAlert(request.session(), "You were successfully registered and can log in now");
+            var error = register(username, email, password, password2);
+            if (error != null) {
+                model.put("error", error);
+            } else {
+                addAlert(request.session(), "You were successfully registered and can log in now");
 
-                    response.redirect(URLS.LOGIN);
+                response.redirect(URLS.LOGIN);
 
-                    // No need to render due to redirect
-                    // Rendering would clear the alerts too early
-                    return null;
-                }
+                PrometheusMetrics metrics = request.attribute("metrics");
+                metrics.incrementRegistrations(METRIC_TYPE_WEB);
+
+                // No need to render due to redirect
+                // Rendering would clear the alerts too early
+                return null;
             }
-        } catch (Exception e) {
-            e.printStackTrace();
-            return e.toString();
         }
 
         return WebApplication.render(request.session(), model, WebApplication.Templates.REGISTER);
@@ -766,6 +792,9 @@ public class WebApplication {
 
                 response.redirect(URLS.USER);
 
+                PrometheusMetrics metrics = request.attribute("metrics");
+                metrics.incrementSignins(METRIC_TYPE_WEB);
+
                 // No need to render due to redirect
                 // Rendering would clear the alerts too early
                 return null;
@@ -783,20 +812,25 @@ public class WebApplication {
         addAlert(request.session(), "You were logged out");
 
         response.redirect(URLS.PUBLIC_TIMELINE);
+
+        PrometheusMetrics metrics = request.attribute("metrics");
+        metrics.incrementSignouts(METRIC_TYPE_WEB);
+
         return null;
     };
 
-    public static Filter protectEndpoint = (Request request, Response response) -> {
-        var auth = request.headers("Authorization");
-        // Auth code is simulator:super_safe!
-        if (auth == null || !auth.equals("Basic c2ltdWxhdG9yOnN1cGVyX3NhZmUh")) {
-            halt(403, gson.toJson(
-                    Map.ofEntries(
-                            Map.entry("status", 403),
-                            Map.entry("error_msg", "You are not authorized to use this resource!")
-                    )
-            ));
-        }
+    public static Filter protectEndpoint (String expectedAuth)  {
+        return (Request request, Response response) -> {
+            var auth = request.headers("Authorization");
+            if (auth == null || !auth.equals(expectedAuth)) {
+                halt(403, gson.toJson(
+                        Map.ofEntries(
+                                Map.entry("status", 403),
+                                Map.entry("error_msg", "You are not authorized to use this resource!")
+                        )
+                ));
+            }
+        };
     };
 
     public static Route serveSimMsgs = (Request request, Response response) -> {
@@ -866,6 +900,10 @@ public class WebApplication {
             query.execute();
             connection.close();
             response.status(204);
+
+            PrometheusMetrics metrics = request.attribute("metrics");
+            metrics.incrementMessages(METRIC_TYPE_API);
+
             return "";
         }
         connection.close();
@@ -874,36 +912,136 @@ public class WebApplication {
     };
 
     public static Route serveSimRegister = (Request request, Response response) -> {
-        try {
-            updateLatest(request);
+        updateLatest(request);
 
-            var json = gson.fromJson(request.body(), HashMap.class);
-            var username = String.valueOf(json.get("username"));
-            var email = String.valueOf(json.get("email"));
-            var password = String.valueOf(json.get("pwd"));
+        var json = gson.fromJson(request.body(), HashMap.class);
+        var username = String.valueOf(json.get("username"));
+        var email = String.valueOf(json.get("email"));
+        var password = String.valueOf(json.get("pwd"));
 
-            var error = register(username, email, password, password);
-            if (error != null) {
-                response.status(400);
-                return gson.toJson(
-                        Map.ofEntries(
-                                Map.entry("status", 400),
-                                Map.entry("error_msg", error)
-                        )
-                );
-            }
+        var error = register(username, email, password, password);
+        if (error != null) {
+            response.status(400);
 
-            response.status(204);
-            return "";
-        } catch (Exception e) {
-            e.printStackTrace();
-            return e.toString();
+            PrometheusMetrics metrics = request.attribute("metrics");
+            metrics.incrementRegistrations(METRIC_TYPE_API);
+
+            return gson.toJson(
+                    Map.ofEntries(
+                            Map.entry("status", 400),
+                            Map.entry("error_msg", error)
+                    )
+            );
         }
+
+        response.status(204);
+        return "";
     };
 
     public static Route serveSimLatest = (Request request, Response response) -> {
         Map<String, Integer> map = new HashMap<>();
         map.put("latest", LATEST);
         return map;
+    };
+
+    public static Route serveMetrics = (Request request, Response response) -> {
+        return metrics.metrics();
+    };
+
+    public static Route serveStats = (Request request, Response response) -> {
+        SQLite db = new SQLite();
+        var connection = db.getConnection();
+
+        String bucketSizeParam = request.queryParams("bucket_size");
+        if (bucketSizeParam == null) {
+            bucketSizeParam = "10";
+        }
+        var bucketSize = Integer.parseInt(bucketSizeParam);
+
+        /*
+        SELECT
+            CAST(followings/10 AS INT)*10 AS bucket_floor, -- CAST(x AS int) == FLOOR(x)
+            COUNT(followings) AS count
+        FROM (
+            SELECT
+                who_id,
+                count(whom_id) AS followings
+            FROM follower
+            GROUP BY who_id
+        )
+        GROUP BY 1
+        ORDER BY 1
+         */
+        var followersSql =
+                "SELECT\n" +
+                "   CAST(followings/? AS INT)*? AS bucket_floor, -- CAST(x AS int) == FLOOR(x)\n" +
+                "   COUNT(followings) AS count\n" +
+                "FROM (\n" +
+                "   SELECT\n" +
+                "       who_id,\n" +
+                "       count(whom_id) AS followings\n" +
+                "   FROM follower\n" +
+                "   GROUP BY who_id\n" +
+                ")\n" +
+                "GROUP BY 1\n" +
+                "ORDER BY 1";
+        var followersQuery = connection.prepareStatement(followersSql);
+        followersQuery.setInt(1, bucketSize);
+        followersQuery.setInt(2, bucketSize);
+
+        var followersBuckets = followersQuery.executeQuery();
+
+        var followers = new ArrayList<Map>();
+        while(followersBuckets.next()) {
+            followers.add(Map.ofEntries(
+                    Map.entry("bucket",
+                            followersBuckets.getInt("bucket_floor")
+                                    + "-"
+                                    + (followersBuckets.getInt("bucket_floor") + bucketSize - 1)
+                    ),
+                    Map.entry("n", followersBuckets.getInt(2))
+            ));
+        }
+
+
+
+        var followingSql =
+                "SELECT\n" +
+                        "   CAST(followings/? AS INT)*? AS bucket_floor, -- CAST(x AS int) == FLOOR(x)\n" +
+                        "   COUNT(followings) AS count\n" +
+                        "FROM (\n" +
+                        "   SELECT\n" +
+                        "       whom_id,\n" +
+                        "       count(who_id) AS followings\n" +
+                        "   FROM follower\n" +
+                        "   GROUP BY whom_id\n" +
+                        ")\n" +
+                        "GROUP BY 1\n" +
+                        "ORDER BY 1";
+        var followingQuery = connection.prepareStatement(followingSql);
+        followingQuery.setInt(1, bucketSize);
+        followingQuery.setInt(2, bucketSize);
+
+        var followingBuckets = followingQuery.executeQuery();
+
+        var following = new ArrayList<Map>();
+        while(followingBuckets.next()) {
+            following.add(Map.ofEntries(
+                    Map.entry("bucket",
+                            followingBuckets.getInt("bucket_floor")
+                                    + "-"
+                                    + (followingBuckets.getInt("bucket_floor") + bucketSize - 1)
+                    ),
+                    Map.entry("n", followingBuckets.getInt(2))
+            ));
+        }
+
+
+        connection.close();
+
+        return Map.ofEntries(
+                Map.entry("followerStats", followers),
+                Map.entry("followingStats", following)
+        );
     };
 }
