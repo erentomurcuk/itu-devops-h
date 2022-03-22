@@ -49,6 +49,8 @@ To only recreate some parts of the infrastructure, "taint" them with ex. `terraf
    
    DRONE_UI_USERNAME=root # Username for drone runner dashboard
    DRONE_UI_PASSWORD= # Password for drone runner dashboard
+
+   DRONE_USER_CREATE="username:<ADD GITHUB USER HERE>,admin:true"
    ```
 
   Use `openssl rand -hex 16` for a 16 byte random string.
@@ -68,6 +70,10 @@ To only recreate some parts of the infrastructure, "taint" them with ex. `terraf
 * (Optional) start a build by pressing the "New Build" button and choose appropriate branch that has a `.drone.yml` in minitwit.
 
 * Change project to be protected. [Update the signature if required](https://docs.drone.io/signature/).
+
+* Make the project trusted in order to allow priviledged pipeline steps.
+
+  Go to repository settings ad a administrator account and enable it.
 
 ### Failed build
 

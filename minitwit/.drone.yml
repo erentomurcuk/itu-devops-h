@@ -68,6 +68,34 @@ steps:
     event:
     - promote
 
+- name: snyk scan
+  image: docker
+  environment:
+    SNYK_TOKEN:
+      from_secret: SNYK_TOKEN
+    DOCKER_USERNAME:
+      from_secret: token
+    DOCKER_PASSWORD:
+      from_secret: token
+    IMAGE: registry.digitalocean.com/minitwit/minitwit-server
+  volumes:
+    - name: dockersock
+      path: /var/run/docker.sock
+  commands:
+  - wget https://static.snyk.io/cli/latest/snyk-linux
+  - chmod +x ./snyk-linux
+  - apk add libstdc++ libgcc gcompat
+  - docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD" registry.digitalocean.com
+  - docker pull $IMAGE:$DRONE_BUILD_NUMBER
+  - ./snyk-linux auth $SNYK_TOKEN
+  # Threshold can be low|medium|high|critical, see https://support.snyk.io/hc/en-us/articles/360001040078-How-is-a-vulnerability-s-severity-determined- low is too low for us
+  - ./snyk-linux container test --app-vulns --nested-jars-depth=3 --severity-threshold=medium --file=minitwit/Dockerfile --username=$DOCKER_USERNAME --password=$DOCKER_PASSWORD $IMAGE:$DRONE_BUILD_NUMBER && res=$? || res=$?
+  - docker rmi $IMAGE:$DRONE_BUILD_NUMBER
+  - exit $res
+  when:
+    event:
+    - promote
+
 - name: update live docker images
   image: alpine:3.15.0
   environment:
@@ -87,6 +115,11 @@ steps:
   when:
     event:
     - promote
+
+volumes:
+  - name: dockersock
+    host:
+      path: /var/run/docker.sock
 
 ---
 
