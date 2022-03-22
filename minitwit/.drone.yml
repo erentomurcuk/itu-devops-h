@@ -86,9 +86,6 @@ steps:
   - ./snyk-linux container test --app-vulns --nested-jars-depth=3 --severity-threshold=medium --file=minitwit/Dockerfile --username=$DOCKER_USERNAME --password=$DOCKER_PASSWORD $IMAGE:$DRONE_BUILD_NUMBER && res=$? || res=$?
   - docker rmi $IMAGE:$DRONE_BUILD_NUMBER
   - exit $res
-  when:
-    event:
-    - promote
 
 - name: update live docker images
   image: alpine:3.15.0
@@ -132,4 +129,4 @@ volumes:
 ---
 
 kind: signature
-hmac: c3ded3393a744e033e0cdb5278f886a7f56d05362b38cdccc89ba258c3446de2
+hmac: 9b5e69b4cf6629407f1cb1235888f2f93857459ad1e1152316fded97a2039a5e
