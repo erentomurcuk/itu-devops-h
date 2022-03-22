@@ -38,6 +38,18 @@ steps:
       include:
       - pull_request
 
+
+- name: semgrep scan
+  image: returntocorp/semgrep-agent:v1
+  commands:
+  - echo Run semgrep scan
+  - semgrep-agent --baseline-ref dev --config p/security-audit --config p/secrets
+  when:
+    event:
+      include:
+      - pull_request
+
+
 - name: create and push docker image
   image: plugins/docker
   settings:
@@ -112,4 +124,4 @@ volumes:
 ---
 
 kind: signature
-hmac: a0a9ffdd68a55f51f0820bfe86e040406b5d5ea9ff8749a72df8efa023a67034
+hmac: 3c0a64af07e82ce70bccbea6d198be68a2b9f4547acdb0b0b46401b3cb0f342a
