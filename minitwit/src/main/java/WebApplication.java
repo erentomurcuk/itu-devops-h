@@ -1,3 +1,5 @@
+import Metrics.PrometheusMetrics;
+import Metrics.TimerStopper;
 import com.google.gson.annotations.SerializedName;
 import com.google.gson.Gson;
 import com.timgroup.jgravatar.Gravatar;
@@ -21,6 +23,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 public class WebApplication {
 
@@ -80,6 +83,8 @@ public class WebApplication {
 
     public static Gson gson = new Gson();
 
+    public static PrometheusMetrics metrics = new PrometheusMetrics();
+
     // The ID of the latest request made by the simulator
     public static int LATEST = 0;
 
@@ -87,6 +92,10 @@ public class WebApplication {
             .setSize(48)
             .setRating(GravatarRating.GENERAL_AUDIENCES)
             .setDefaultImage(GravatarDefaultImage.IDENTICON);
+
+    private static final String METRIC_TYPE_WEB = "web";
+    private static final String METRIC_TYPE_API = "api";
+    private static final String METRIC_TYPE_METRICS = "metrics";
 
     public static void main(String[] args) {
         System.out.println("Hello Minitwit");
@@ -100,6 +109,10 @@ public class WebApplication {
         staticFiles.location("/static");
 
         before("/*", (req, res) -> {
+            req.attribute("metrics", metrics);
+            if (!req.uri().startsWith("/static")) {
+                req.attribute("startTime", System.nanoTime());
+            }
             // Setup initial session state once
             if (req.session().isNew()) {
                 req.session().attribute("alerts", new ArrayList<>());
@@ -107,9 +120,24 @@ public class WebApplication {
         });
 
         after("/*", (req, res) -> {
+            long startTime = req.attribute("startTime");
+            if (startTime != 0) {
+                long time = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime);
+                metrics.observeRequestTime(
+                        time,
+                        req.uri().startsWith("/api")
+                                ? METRIC_TYPE_API
+                                : req.uri().startsWith("/metrics") ? METRIC_TYPE_METRICS : METRIC_TYPE_WEB,
+                        res.status()
+                );
+            }
             // TODO: currently doesn't log query parameters or unusual headers
             System.out.println(LocalDateTime.now() + " - " + req.uri() + " - " + res.status());
         });
+
+        //before("/metrics", protectEndpoint("Basic asdf"));
+        get("/metrics", catchRoute(WebApplication.serveMetrics));
+        get("/metrics/stats", catchRoute(WebApplication.serveStats), gson::toJson);
 
         get(URLS.PUBLIC_TIMELINE, catchRoute(WebApplication.servePublicTimelinePage));
         get(URLS.REGISTER, catchRoute(WebApplication.serveRegisterPage));
@@ -128,7 +156,8 @@ public class WebApplication {
         // Sim API
         path("/api", () -> {
             // All endpoints in this path must be authenticated
-            before("/*", protectEndpoint);
+            // Auth code is simulator:super_safe!
+            before("/*", protectEndpoint("Basic c2ltdWxhdG9yOnN1cGVyX3NhZmUh"));
 
             get(URLS.SIM_MESSAGES, catchRoute(WebApplication.serveSimMsgs), gson::toJson);
             post(URLS.SIM_REGISTER, catchRoute(WebApplication.serveSimRegister)); // Handles JSON on its own
@@ -338,6 +367,9 @@ public class WebApplication {
 
         response.redirect(URLS.USER, 303);
 
+        PrometheusMetrics metrics = request.attribute("metrics");
+        metrics.incrementMessages(METRIC_TYPE_WEB);
+
         return "";
     };
 
@@ -373,6 +405,9 @@ public class WebApplication {
 
         addAlert(request.session(), "You are now following " + request.params(":username"));
 
+        PrometheusMetrics metrics = request.attribute("metrics");
+        metrics.incrementFollows(METRIC_TYPE_WEB);
+
         return "";
     };
 
@@ -396,6 +431,9 @@ public class WebApplication {
         response.redirect(URLS.urlFor(URLS.USER_TIMELINE, Map.ofEntries(
                 Map.entry("username", request.params(":username"))
         )));
+
+        PrometheusMetrics metrics = request.attribute("metrics");
+        metrics.incrementUnfollows(METRIC_TYPE_API);
 
         return "";
     };
@@ -438,6 +476,10 @@ public class WebApplication {
             conn.close();
 
             response.status(204);
+
+            PrometheusMetrics metrics = request.attribute("metrics");
+            metrics.incrementFollows(METRIC_TYPE_API);
+
             return "";
 
         }
@@ -461,6 +503,10 @@ public class WebApplication {
             conn.close();
 
             response.status(204);
+
+            PrometheusMetrics metrics = request.attribute("metrics");
+            metrics.incrementUnfollows(METRIC_TYPE_API);
+
             return "";
         }
 
@@ -707,6 +753,9 @@ public class WebApplication {
 
                 response.redirect(URLS.LOGIN);
 
+                PrometheusMetrics metrics = request.attribute("metrics");
+                metrics.incrementRegistrations(METRIC_TYPE_WEB);
+
                 // No need to render due to redirect
                 // Rendering would clear the alerts too early
                 return null;
@@ -751,6 +800,9 @@ public class WebApplication {
 
                 response.redirect(URLS.USER);
 
+                PrometheusMetrics metrics = request.attribute("metrics");
+                metrics.incrementSignins(METRIC_TYPE_WEB);
+
                 // No need to render due to redirect
                 // Rendering would clear the alerts too early
                 return null;
@@ -768,20 +820,25 @@ public class WebApplication {
         addAlert(request.session(), "You were logged out");
 
         response.redirect(URLS.PUBLIC_TIMELINE);
+
+        PrometheusMetrics metrics = request.attribute("metrics");
+        metrics.incrementSignouts(METRIC_TYPE_WEB);
+
         return null;
     };
 
-    public static Filter protectEndpoint = (Request request, Response response) -> {
-        var auth = request.headers("Authorization");
-        // Auth code is simulator:super_safe!
-        if (auth == null || !auth.equals("Basic c2ltdWxhdG9yOnN1cGVyX3NhZmUh")) {
-            halt(403, gson.toJson(
-                    Map.ofEntries(
-                            Map.entry("status", 403),
-                            Map.entry("error_msg", "You are not authorized to use this resource!")
-                    )
-            ));
-        }
+    public static Filter protectEndpoint (String expectedAuth)  {
+        return (Request request, Response response) -> {
+            var auth = request.headers("Authorization");
+            if (auth == null || !auth.equals(expectedAuth)) {
+                halt(403, gson.toJson(
+                        Map.ofEntries(
+                                Map.entry("status", 403),
+                                Map.entry("error_msg", "You are not authorized to use this resource!")
+                        )
+                ));
+            }
+        };
     };
 
     public static Route serveSimMsgs = (Request request, Response response) -> {
@@ -851,6 +908,10 @@ public class WebApplication {
             query.execute();
             connection.close();
             response.status(204);
+
+            PrometheusMetrics metrics = request.attribute("metrics");
+            metrics.incrementMessages(METRIC_TYPE_API);
+
             return "";
         }
         connection.close();
@@ -869,6 +930,10 @@ public class WebApplication {
         var error = register(username, email, password, password);
         if (error != null) {
             response.status(400);
+
+            PrometheusMetrics metrics = request.attribute("metrics");
+            metrics.incrementRegistrations(METRIC_TYPE_API);
+
             return gson.toJson(
                     Map.ofEntries(
                             Map.entry("status", 400),
@@ -885,5 +950,106 @@ public class WebApplication {
         Map<String, Integer> map = new HashMap<>();
         map.put("latest", LATEST);
         return map;
+    };
+
+    public static Route serveMetrics = (Request request, Response response) -> {
+        return metrics.metrics();
+    };
+
+    public static Route serveStats = (Request request, Response response) -> {
+        SqlDatabase db = new SqlDatabase();
+        var connection = db.getConnection();
+
+        String bucketSizeParam = request.queryParams("bucket_size");
+        if (bucketSizeParam == null) {
+            bucketSizeParam = "10";
+        }
+        var bucketSize = Integer.parseInt(bucketSizeParam);
+
+        /*
+        SELECT
+            CAST(followings/10 AS INT)*10 AS bucket_floor, -- CAST(x AS int) == FLOOR(x)
+            COUNT(followings) AS count
+        FROM (
+            SELECT
+                who_id,
+                count(whom_id) AS followings
+            FROM follower
+            GROUP BY who_id
+        )
+        GROUP BY 1
+        ORDER BY 1
+         */
+        var followersSql =
+                "SELECT\n" +
+                "   CAST(followings/? AS INT)*? AS bucket_floor, -- CAST(x AS int) == FLOOR(x)\n" +
+                "   COUNT(followings) AS count\n" +
+                "FROM (\n" +
+                "   SELECT\n" +
+                "       who_id,\n" +
+                "       count(whom_id) AS followings\n" +
+                "   FROM follower\n" +
+                "   GROUP BY who_id\n" +
+                ")\n" +
+                "GROUP BY 1\n" +
+                "ORDER BY 1";
+        var followersQuery = connection.prepareStatement(followersSql);
+        followersQuery.setInt(1, bucketSize);
+        followersQuery.setInt(2, bucketSize);
+
+        var followersBuckets = followersQuery.executeQuery();
+
+        var followers = new ArrayList<Map>();
+        while(followersBuckets.next()) {
+            followers.add(Map.ofEntries(
+                    Map.entry("bucket",
+                            followersBuckets.getInt("bucket_floor")
+                                    + "-"
+                                    + (followersBuckets.getInt("bucket_floor") + bucketSize - 1)
+                    ),
+                    Map.entry("n", followersBuckets.getInt(2))
+            ));
+        }
+
+
+
+        var followingSql =
+                "SELECT\n" +
+                        "   CAST(followings/? AS INT)*? AS bucket_floor, -- CAST(x AS int) == FLOOR(x)\n" +
+                        "   COUNT(followings) AS count\n" +
+                        "FROM (\n" +
+                        "   SELECT\n" +
+                        "       whom_id,\n" +
+                        "       count(who_id) AS followings\n" +
+                        "   FROM follower\n" +
+                        "   GROUP BY whom_id\n" +
+                        ")\n" +
+                        "GROUP BY 1\n" +
+                        "ORDER BY 1";
+        var followingQuery = connection.prepareStatement(followingSql);
+        followingQuery.setInt(1, bucketSize);
+        followingQuery.setInt(2, bucketSize);
+
+        var followingBuckets = followingQuery.executeQuery();
+
+        var following = new ArrayList<Map>();
+        while(followingBuckets.next()) {
+            following.add(Map.ofEntries(
+                    Map.entry("bucket",
+                            followingBuckets.getInt("bucket_floor")
+                                    + "-"
+                                    + (followingBuckets.getInt("bucket_floor") + bucketSize - 1)
+                    ),
+                    Map.entry("n", followingBuckets.getInt(2))
+            ));
+        }
+
+
+        connection.close();
+
+        return Map.ofEntries(
+                Map.entry("followerStats", followers),
+                Map.entry("followingStats", following)
+        );
     };
 }

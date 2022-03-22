@@ -49,6 +49,8 @@ To only recreate some parts of the infrastructure, "taint" them with ex. `terraf
    
    DRONE_UI_USERNAME=root # Username for drone runner dashboard
    DRONE_UI_PASSWORD= # Password for drone runner dashboard
+
+   DRONE_USER_CREATE="username:<ADD GITHUB USER HERE>,admin:true"
    ```
 
   Use `openssl rand -hex 16` for a 16 byte random string.
@@ -69,8 +71,37 @@ To only recreate some parts of the infrastructure, "taint" them with ex. `terraf
 
 * Change project to be protected. [Update the signature if required](https://docs.drone.io/signature/).
 
+* Make the project trusted in order to allow priviledged pipeline steps.
+
+  Go to repository settings ad a administrator account and enable it.
+
 ### Failed build
 
 Sometimes drone fails without explaination or during java installation. Try rerun it a 2-3 times before debuging it.
 
 If a build takes more than 5 minutes (at the time of writing) then it's likely to be stuck. Cancel it and restart it. Drone will automatically terminate very long running builds.
+
+## Prometheus
+
+Will be accessible from the droplet ip on port 9090.
+
+# Grafana
+
+Will be accessible from the droplet ip on port 3000. On first setup, go to the front page and log in with admin/admin, and change the password.
+
+Dashboards are added manually, but there's a collection of "standard" dashboards on https://grafana.com/grafana/dashboards. See
+
+* [Prometheus 2.0 Overview](https://grafana.com/grafana/dashboards/3662)
+* [Node Exporter Full](https://grafana.com/grafana/dashboards/1860)
+
+After setting up a useful dashboard, consider saving its JSON Model so it can easily be recreated if the data is lost in the [dashboards folder](files/monitoring/dashboards/).
+
+At the time of writing Grafana needs these datasources:
+
+* The Prometheus server.
+
+* JSON API from 1 minitwit server.
+
+  Consider replacing this with a PostgreSQL data source.
+
+Consider adding a alert contact point and set up alerts.

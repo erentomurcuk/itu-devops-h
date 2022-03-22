@@ -1,0 +1,7 @@
+rules:
+  - id: java-no-prints-in-prod
+    pattern: System.out.println(...)
+    message: No prints in my production code :C
+    severity: INFO
+    languages:
+      - java
