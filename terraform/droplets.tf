@@ -86,3 +86,14 @@ resource "digitalocean_droplet" "monitoring" {
     timeout     = "2m"
   }
 }
+
+resource "digitalocean_droplet" "db" {
+  image    = "ubuntu-20-04-x64"
+  name     = "db-1"
+  region   = "ams3"
+  size     = "s-1vcpu-1gb"
+  ssh_keys = [
+    digitalocean_ssh_key.leonora.fingerprint,
+    digitalocean_ssh_key.smilla.fingerprint
+  ]
+}

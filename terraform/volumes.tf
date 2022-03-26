@@ -12,3 +12,16 @@
 #  droplet_id = digitalocean_droplet.web.id
 #  volume_id  = digitalocean_volume.minitwit-data.id
 #}
+
+resource "digitalocean_volume" "db" {
+  region                  = "ams3"
+  name                    = "minitwitdb"
+  size                    = 5
+  initial_filesystem_type = "ext4"
+  description             = "volume for minitwit db server"
+}
+
+resource "digitalocean_volume_attachment" "minitwit_db_data" {
+  droplet_id = digitalocean_droplet.db.id
+  volume_id  = digitalocean_volume.db.id
+}
