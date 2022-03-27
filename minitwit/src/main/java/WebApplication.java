@@ -88,6 +88,8 @@ public class WebApplication {
     // The ID of the latest request made by the simulator
     public static int LATEST = 0;
 
+    private static final String USERNAME = "username";
+
     private static final Gravatar gravatar = new Gravatar()
             .setSize(48)
             .setRating(GravatarRating.GENERAL_AUDIENCES)
@@ -231,7 +233,7 @@ public class WebApplication {
             result.put("text", messageRs.getString("text"));
             result.put("pub_date", messageRs.getInt("pub_date"));
             result.put("flagged", messageRs.getInt("flagged"));
-            result.put("username", messageRs.getString("username"));
+            result.put(USERNAME, messageRs.getString(USERNAME));
             result.put("email", messageRs.getString("email"));
             messages.add(result);
         }
@@ -400,7 +402,7 @@ public class WebApplication {
         conn.close();
 
         response.redirect(URLS.urlFor(URLS.USER_TIMELINE, Map.ofEntries(
-                Map.entry("username", request.params(":username"))
+                Map.entry(USERNAME, request.params(":username"))
         )));
 
         addAlert(request.session(), "You are now following " + request.params(":username"));
@@ -429,7 +431,7 @@ public class WebApplication {
         addAlert(request.session(), "You are no longer following " + request.params(":username"));
 
         response.redirect(URLS.urlFor(URLS.USER_TIMELINE, Map.ofEntries(
-                Map.entry("username", request.params(":username"))
+                Map.entry(USERNAME, request.params(":username"))
         )));
 
         PrometheusMetrics metrics = request.attribute("metrics");
@@ -525,7 +527,7 @@ public class WebApplication {
             var follows = new Follows();
             follows.follows = new ArrayList<>();
             while (rs.next()) {
-                follows.follows.add(rs.getString("username"));
+                follows.follows.add(rs.getString(USERNAME));
             }
 
             conn.close();
@@ -575,7 +577,7 @@ public class WebApplication {
         var loggedInUser = getUser(conn, (userID));
 
         if (loggedInUser != null && loggedInUser.next()) {
-            model.put("user", loggedInUser.getString("username"));
+            model.put("user", loggedInUser.getString(USERNAME));
         }
 
         // Where does this come from in python?
@@ -599,7 +601,7 @@ public class WebApplication {
         var loggedInUser = getUser(conn, (userID));
 
         if (loggedInUser != null && loggedInUser.next()) {
-            model.put("user", loggedInUser.getString("username"));
+            model.put("user", loggedInUser.getString(USERNAME));
         }
 
         else if (loggedInUser == null) {
@@ -611,13 +613,12 @@ public class WebApplication {
         model.put("endpoint", URLS.USER);
         model.put("title", "My Timeline");
 
-        var statement = conn.prepareStatement(
-                "        select message.*, \"user\".* from message, \"user\"\n" +
-                        "        where message.flagged = 0 and message.author_id = \"user\".user_id and (\n" +
-                        "            \"user\".user_id = ? or\n" +
-                        "            \"user\".user_id in (select whom_id from follower\n" +
-                        "                                    where who_id = ?))\n" +
-                        "        order by message.pub_date desc limit ?");
+        var statement = conn.prepareStatement("""
+                select message.*, \"user\".* from message, 
+                \"user\" where message.flagged = 0 and message.author_id = \"user\".user_id 
+                and (\"user\".user_id = ? or \"user\".user_id 
+                in (select whom_id from follower where who_id = ?)) 
+                order by message.pub_date desc limit ?""");
 
         statement.setInt(1, request.session().attribute("user_id"));
         statement.setInt(2, request.session().attribute("user_id"));
@@ -632,7 +633,7 @@ public class WebApplication {
             result.put("text", rs.getString("text"));
             result.put("pub_date", rs.getString("pub_date")); // Type?
             result.put("flagged", rs.getInt("flagged"));
-            result.put("username", rs.getString("username"));
+            result.put(USERNAME, rs.getString(USERNAME));
             result.put("email", rs.getString("email"));
             result.put("pw_hash", rs.getString("pw_hash"));
             results.add(result);
@@ -654,7 +655,7 @@ public class WebApplication {
         var loggedInUser = getUser(conn, (userID));
 
         if (loggedInUser != null && loggedInUser.next()) {
-            model.put("user", loggedInUser.getString("username"));
+            model.put("user", loggedInUser.getString(USERNAME));
             model.put("user_id", loggedInUser.getInt("user_id"));
         }
 
@@ -672,12 +673,12 @@ public class WebApplication {
         }
         var profileUser = new HashMap<String, Object>();
         profileUser.put("user_id", profileRs.getInt("user_id"));
-        profileUser.put("username", profileRs.getString("username"));
+        profileUser.put(USERNAME, profileRs.getString(USERNAME));
         profileUser.put("email", profileRs.getString("email"));
         model.put("profile_user", profileUser);
         profileRs.close();
 
-        model.put("title", profileUser.get("username") + "'s Timeline");
+        model.put("title", profileUser.get(USERNAME) + "'s Timeline");
 
         if (userID != null) {
             var followedStmt = conn.prepareStatement("select 1 from follower where\n" +
@@ -710,7 +711,7 @@ public class WebApplication {
             result.put("text", messageRs.getString("text"));
             result.put("pub_date", messageRs.getString("pub_date")); // Type?
             result.put("flagged", messageRs.getInt("flagged"));
-            result.put("username", messageRs.getString("username"));
+            result.put(USERNAME, messageRs.getString(USERNAME));
             result.put("email", messageRs.getString("email"));
             messages.add(result);
         }
@@ -731,12 +732,12 @@ public class WebApplication {
         // }
 
         model.put("messages", new ArrayList<String>() {});
-        model.put("username", request.queryParams("username") == null ? "" : request.queryParams("username"));
+        model.put(USERNAME, request.queryParams(USERNAME) == null ? "" : request.queryParams(USERNAME));
         model.put("email", request.queryParams("email") == null ? "" : request.queryParams("email"));
         model.put("title", "Sign Up");
 
         if (request.requestMethod().equals("POST")) {
-            var username = request.queryParams("username");
+            var username = request.queryParams(USERNAME);
             var email = request.queryParams("email");
             var password = request.queryParams("password");
             var password2 = request.queryParams("password2");
@@ -768,7 +769,7 @@ public class WebApplication {
         Map<String, Object> model = new HashMap<>();
         model.put("title", "Sign In");
 
-        var enteredUserName = request.queryParams("username");
+        var enteredUserName = request.queryParams(USERNAME);
         var enteredPW = request.queryParams("password");
 
         if (request.requestMethod().equals("POST")) {
@@ -845,7 +846,7 @@ public class WebApplication {
         var filteredMessages = messages.stream().map((message) -> Map.ofEntries(
                Map.entry("content", message.get("text")),
                Map.entry("pub_date", message.get("pub_date")),
-               Map.entry("user", message.get("username"))
+               Map.entry("user", message.get(USERNAME))
        ));
         return filteredMessages.toList();
     };
@@ -882,7 +883,7 @@ public class WebApplication {
                     var filteredMessage = new HashMap();
                     filteredMessage.put("content", messages.getString("text"));
                     filteredMessage.put("pub_date", messages.getInt("pub_date"));
-                    filteredMessage.put("user", messages.getString("username"));
+                    filteredMessage.put("user", messages.getString(USERNAME));
                     filteredMessages.add(filteredMessage);
                 }
                 connection.close();
@@ -919,7 +920,7 @@ public class WebApplication {
         updateLatest(request);
 
         var json = gson.fromJson(request.body(), HashMap.class);
-        var username = String.valueOf(json.get("username"));
+        var username = String.valueOf(json.get(USERNAME));
         var email = String.valueOf(json.get("email"));
         var password = String.valueOf(json.get("pwd"));
 
