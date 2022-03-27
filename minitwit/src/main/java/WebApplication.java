@@ -694,10 +694,11 @@ public class WebApplication {
             model.put("followed", false);
         }
 
-        var messageStmt = conn.prepareStatement(
-                "select message.*, \"user\".* from message, \"user\" where\n" +
-                        "            \"user\".user_id = message.author_id and \"user\".user_id = ?\n" +
-                        "            order by message.pub_date desc limit ?");
+        var messageStmt = conn.prepareStatement("""
+                select message.*, \"user\".* from message, 
+                \"user\" where \"user\".user_id = message.author_id and \"user\".user_id = ? 
+                order by message.pub_date desc limit ?""");
+
         messageStmt.setInt(1, (int) profileUser.get("user_id"));
         messageStmt.setInt(2, PER_PAGE);
         var messages = new ArrayList<HashMap<String, Object>>();
@@ -722,11 +723,6 @@ public class WebApplication {
 
     public static Route serveRegisterPage = (Request request, Response response) -> {
         Map<String, Object> model = new HashMap<>();
-
-        var db = new SqlDatabase();
-        var conn = db.getConnection();
-        var insert = conn.prepareStatement("insert into \"user\" (\n" +
-                "username, email, pw_hash) values (?, ?, ?)");
 
         // TODO: Get logged in user (if any)
         // if (userIsLoggedIn) {
