@@ -1,16 +1,15 @@
-# Minitwit server
+# MiniTwit
 
-Run the WebApplication class to open web server.
+Run the WebApplication class to open the web server locally.
 
-Run SQLLite class to initialize database.
+The application is currently deployed at http://143.198.249.10/.
 
 Uses
-* Spark as a web application framework
+* Spark as a web application framework:
   https://sparkjava.com/documentation
-* Apache velocity
+* Apache velocity for HTML templates:
   https://velocity.apache.org/engine/2.3/user-guide.html
-* SQLite-JDBC
-  https://mvnrepository.com/artifact/org.xerial/sqlite-jdbc
+* PostgreSQL as a remote database: https://www.postgresql.org/docs/
 
 Project is loosely based on [this](https://sparkjava.com/tutorials/application-structure) tutorial.
 
@@ -20,6 +19,14 @@ Project is loosely based on [this](https://sparkjava.com/tutorials/application-s
 
   Port number server should use, must be a number or unset in which case it defaults to 8080.
 
-* MINITWIT_DB_PATH
+* MINITWIT_DB_PASS
 
-  Path to minitwit. Default is minitwit.db
+  The password to the Postgres database.
+
+* MINITWIT_DB_USER
+
+  The username to the Postgres database.
+
+* MINITWIT_DB_URL
+
+  The URL to the Postgres database.

@@ -1,22 +1,30 @@
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URISyntaxException;
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
-public class SQLite {
+public class SqlDatabase {
+
     private Connection connection = null;
 
     public Connection connect() throws SQLException {
-        var file = System.getenv("MINITWIT_DB_PATH");
-        if (file == null) {
-            file = "minitwit.db";
+        String password = System.getenv("MINITWIT_DB_PASS");
+        String username = System.getenv("MINITWIT_DB_USER");
+        String url = System.getenv("MINITWIT_DB_URL");
+
+        if (password == null) {
+            throw new IllegalStateException("Password for the database is required");
+        } else if (username == null) {
+            throw new IllegalStateException("Username for the database is required");
+        } else if (url == null) {
+            throw new IllegalStateException("URL for the database is required");
         }
-        connection = DriverManager.getConnection("jdbc:sqlite:" + file);
+
+        connection = DriverManager.getConnection(url, username, password);
+
         return connection;
     }
 
@@ -39,26 +47,15 @@ public class SQLite {
 
         // Run the sql in the schema file on the database
         Statement statement = connection.createStatement();
-        for (String statementLine:
-                schemaStatements) {
+
+        for (String statementLine: schemaStatements) {
             System.out.println(statementLine.trim());
-            try {
-                ResultSet rs = statement.executeQuery(statementLine.trim());
-                rs.next();
-            } catch (Exception e) {
-                // Someone more clever than me please change above to
-                // statement.execute(statementLine.trim());
-                // and remove rs part.
-                // Exceptions are expected because executeQuery expects the
-                // query to return a ResultSet but some that we use doesn't.
-            }
+            statement.executeUpdate(statementLine.trim());
         }
-        //statement.close();
     }
 
-
     public static void main(String[] args) {
-        SQLite db = new SQLite();
+        SqlDatabase db = new SqlDatabase();
         try {
             db.init();
             System.out.println("Done!");
