@@ -1,4 +1,13 @@
 version: '2'
+
+networks:
+  vpcbr: # virtual network name
+    driver: bridge
+    ipam:
+     config: # here, we define our ip space
+       - subnet: 10.5.0.0/16
+         gateway: 10.5.0.1
+
 services:
   prometheus:
     image: prom/prometheus:v2.33.5
@@ -8,6 +17,17 @@ services:
       - /opt/prometheus.yml:/etc/prometheus/prometheus.yml
       - /opt/prometheus:/prometheus
     restart: always
+    networks:
+      vpcbr:
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://10.5.0.2:3100/loki/api/v1/push"
+        loki-pipeline-stages: |
+          - regex:
+              expression: '(level|lvl)=(?P<level>\w+)'
+          - labels:
+              level:
 
   grafana:
     image: grafana/grafana-oss:8.4.3
@@ -20,3 +40,37 @@ services:
     environment:
       - GF_INSTALL_PLUGINS=marcusolsson-json-datasource
     restart: always
+    networks:
+      vpcbr:
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://10.5.0.2:3100/loki/api/v1/push"
+        loki-pipeline-stages: |
+          - regex:
+              expression: '(level|lvl)=(?P<level>\w+)'
+          - regex:
+              expression: '(method)=(?P<method>\w+)'
+          - labels:
+              level:
+              method:
+
+  loki:
+    image: grafana/loki:2.3.0
+    ports:
+      - "3100:3100"
+    volumes:
+      - /opt/loki-local-config.yml:/etc/loki/local-config.yaml
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      vpcbr: # this is the place where we assign the static ipv4 address
+        ipv4_address: 10.5.0.2
+
+  promtail:
+    image: grafana/promtail:2.3.0
+    volumes:
+      - /var/log:/var/log
+      - /opt/promtail-config.yml:/etc/promtail/config.yml
+    command: -config.file=/etc/promtail/config.yml
+    networks:
+      vpcbr:

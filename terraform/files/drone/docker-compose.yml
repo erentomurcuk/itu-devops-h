@@ -19,6 +19,31 @@ services:
       DRONE_DATABASE_SECRET: ${DRONE_DATABASE_SECRET}
       DRONE_USER_CREATE: ${DRONE_USER_CREATE}
     restart: always
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://10.110.0.4:3100/loki/api/v1/push"
+        loki-pipeline-stages: |
+          - json:
+              expressions:
+                commit: commit
+                event: event
+                level: level
+                msg: msg
+                pipeline: pipeline
+                ref: ref
+                repo: repo
+                time: time
+                message: "[level, event, pipeline, msg, ref, commit, repo, time] | join(', ', @)"
+          - labels:
+              level:
+              event:
+              pipeline:
+          - output:
+              source: message
+          - timestamp:
+              source: time
+              format: RFC3339
 
   drone-runner-docker:
     image: drone/drone-runner-docker:1
@@ -33,6 +58,20 @@ services:
       DRONE_UI_USERNAME: ${DRONE_UI_USERNAME}
       DRONE_UI_PASSWORD: ${DRONE_UI_PASSWORD}
     restart: always
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://10.110.0.4:3100/loki/api/v1/push"
+        loki-pipeline-stages: |
+          - regex:
+              expression: '(level|lvl)=(?P<level>\w+)'
+          - regex:
+              expression: '(time)=(?P<time>\w+)'
+          - labels:
+              level:
+          - timestamp:
+              source: time
+              format: RFC3339
 
 networks:
   drone:
