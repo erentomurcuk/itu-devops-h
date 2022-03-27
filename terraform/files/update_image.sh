@@ -14,9 +14,9 @@ docker stop minitwit-server && docker rm minitwit-server
 echo "Starting container with new image"
 docker run \
     --name minitwit-server \
-    -p 80:80 \
-    -v /opt/minitwit.db:/opt/minitwit.db \
-    -e "MINITWIT_DB=/opt/minitwit.db" \
+    -p 80:8080 \
+    -v /opt/minitwit:/opt/minitwit \
+    -e "MINITWIT_DB=/opt/minitwit/minitwit.db" \
     --restart always \
     -d \
     $IMAGE:$DRONE_BUILD_NUMBER
