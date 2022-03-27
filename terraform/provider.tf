@@ -39,3 +39,8 @@ resource "digitalocean_ssh_key" "lucas" {
   name       = "lucas"
   public_key = file("keys/id_rsa_lucas.pub")
 }
+
+resource "digitalocean_ssh_key" "simon" {
+  name       = "simon"
+  public_key = file("keys/id_rsa_simon.pub")
+}
