@@ -1,4 +1,5 @@
-﻿# MiniTwit API Service Level Agreement (SLA)
+﻿
+# MiniTwit API Service Level Agreement (SLA)
 
 ## Introduction
 
@@ -8,7 +9,7 @@ If Continuous Disintegration does not maintain and achieve the given Service Lev
 
 | Covered Service | Monthly Uptime Percentage |
 |--|--|
-| MiniTwit API | >=87% |
+| MiniTwit API | >=98% |
 
 ## Definitions
 
@@ -17,6 +18,14 @@ The following definitions apply to the Service Level Agreement:
  - "Back-off Requirements" means, when the customer has an error, they are responsible for waiting for a period of time. The customer has to wait for a minimum of 10 seconds before they issue another request
  - "Error Code" means that an operation has failed. e.g. HTTP Code 5xx
  - "Success Code" means that an operation has succeeded. e.g. HTTP Code 2xx
+ - "Opening an Issue" means that the customer can open an issue with given severity in case of the following Monthly Uptime Percentage:
+
+| Monthly Uptime Percentage | Issue Type |
+|--|--|
+| <98% | Mild Issue |
+| <90% | Important Issue |
+| <75% | Severe Issue |
+
 
 ## Terms
 
