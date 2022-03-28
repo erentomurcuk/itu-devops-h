@@ -18,13 +18,13 @@ The following definitions apply to the Service Level Agreement:
  - "Back-off Requirements" means, when the customer has an error, they are responsible for waiting for a period of time. The customer has to wait for a minimum of 10 seconds before they issue another request
  - "Error Code" means that an operation has failed. e.g. HTTP Code 5xx
  - "Success Code" means that an operation has succeeded. e.g. HTTP Code 2xx
- - "Opening an Issue" means that the customer can open extra issues with given severity in case of the following Monthly Uptime Percentage:
+ - "Financial system" means the following:
 
-| Monthly Uptime Percentage | Issue Type |
+| Monthly Uptime Percentage | Percentage of monthly bill for applicable Covered Service which does not meet SLO that will be credited to the future bills of the customer |
 |--|--|
-| <98% | Mild Issue |
-| <90% | Important Issue |
-| <75% | Severe Issue |
+| <98% | 0% |
+| <90% | 0% |
+| <75% | 0% |
 
 
 ## Terms
