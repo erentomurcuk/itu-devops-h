@@ -5,7 +5,7 @@
 
 During the Term of agreement under which Continuous Disintegration (under the name of ITU Devops Group H Spring 2022) has agreed to provide MiniTwit API service to the customer, the service will provide a Monthly Uptime Percentage. (the "Service Level Objective" or "SLO")
 
-If Continuous Disintegration does not maintain and achieve the given Service Level Objective for given MiniTwit API service, then an issue can be opened on GitHub page with the details of the received error. Issues page of Group H can be accessed [here](https://github.com/Herover/itu-devops-h/issues). Given issue will be checked by the development team of MiniTwit API.
+If Continuous Disintegration does not maintain and achieve the given Service Level Objective for given MiniTwit API service, the customer will be eligible to get the Financial System given in the Definitions. Additionally, an issue can be opened on GitHub page with the details of the received error. Issues page of Group H can be accessed [here](https://github.com/Herover/itu-devops-h/issues). Given issue will be checked by the development team of MiniTwit API.
 
 | Covered Service | Monthly Uptime Percentage |
 |--|--|
@@ -18,13 +18,13 @@ The following definitions apply to the Service Level Agreement:
  - "Back-off Requirements" means, when the customer has an error, they are responsible for waiting for a period of time. The customer has to wait for a minimum of 10 seconds before they issue another request
  - "Error Code" means that an operation has failed. e.g. HTTP Code 5xx
  - "Success Code" means that an operation has succeeded. e.g. HTTP Code 2xx
- - "Financial system" means the following:
+ - "Financial System" means the following:
 
 | Monthly Uptime Percentage | Percentage of monthly bill for applicable Covered Service which does not meet SLO that will be credited to the future bills of the customer |
 |--|--|
-| <98% | 0% |
-| <90% | 0% |
-| <75% | 0% |
+| <98% | 10% |
+| <90% | 15% |
+| <75% | 20% |
 
 
 ## Terms
