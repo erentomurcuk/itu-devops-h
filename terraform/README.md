@@ -89,7 +89,7 @@ If a build takes more than 5 minutes (at the time of writing) then it's likely t
 
 Will be accessible from the droplet ip on port 9090.
 
-# Grafana
+## Grafana
 
 Will be accessible from the droplet ip on port 3000. On first setup, go to the front page and log in with admin/admin, and change the password.
 
@@ -109,3 +109,7 @@ At the time of writing Grafana needs these datasources:
   Consider replacing this with a PostgreSQL data source.
 
 Consider adding a alert contact point and set up alerts.
+
+## Postgres database
+
+Install is done with the terraform/setup_server_db.sh script, but a .env file must be created manually in /opt/postgres with a POSTGRES_PASSWORD value, which must also be created in Drone as a secret for minitwit server deployments to be successful.
