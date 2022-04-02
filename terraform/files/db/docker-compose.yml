@@ -6,7 +6,7 @@ services:
     image: postgres
     restart: unless-stopped
     environment:
-      POSTGRES_PASSWORD: "toor"
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - type: bind
         source: /mnt/minitwitdb/data
