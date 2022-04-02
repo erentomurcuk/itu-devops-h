@@ -946,7 +946,6 @@ public class WebApplication {
     };
 
     public static Route serveMetrics = (Request request, Response response) -> {
-        if (true)throw new Exception("Ew");
         return metrics.metrics();
     };
 
