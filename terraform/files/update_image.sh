@@ -4,6 +4,7 @@ IMAGE=$1
 DRONE_BUILD_NUMBER=$2
 DOCKER_USERNAME=$3
 DOCKER_PASSWORD=$4
+POSTGRES_PASSWORD=$5
 
 echo "Logging in to registry"
 docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD" registry.digitalocean.com
@@ -16,7 +17,9 @@ docker run \
     --name minitwit-server \
     -p 80:8080 \
     -v /opt/minitwit:/opt/minitwit \
-    -e "MINITWIT_DB=/opt/minitwit/minitwit.db" \
+    -e "MINITWIT_DB_PASS=$POSTGRES_PASSWORD" \
+    -e "MINITWIT_DB_USER=minitwituser" \
+    -e "MINITWIT_DB_URL=jdbc:postgresql://159.223.236.108:5432/minitwit" \
     --restart always \
     -d \
     $IMAGE:$DRONE_BUILD_NUMBER
