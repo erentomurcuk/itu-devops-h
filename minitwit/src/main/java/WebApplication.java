@@ -84,7 +84,7 @@ public class WebApplication {
     public static int PER_PAGE = 30;
 
     public static Gson gson = new Gson();
-    public static Logger logger = LoggerFactory.getLogger("Minitwit");
+    public static final Logger logger = LoggerFactory.getLogger("Minitwit");
 
     public static PrometheusMetrics metrics = new PrometheusMetrics();
 
