@@ -17,6 +17,7 @@ services:
       DRONE_SERVER_PROTO: ${DRONE_SERVER_PROTO}
       DRONE_USER_FILTER: ${DRONE_USER_FILTER}
       DRONE_DATABASE_SECRET: ${DRONE_DATABASE_SECRET}
+      DRONE_USER_CREATE: ${DRONE_USER_CREATE}
     restart: always
 
   drone-runner-docker:

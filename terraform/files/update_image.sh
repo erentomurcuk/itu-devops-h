@@ -12,7 +12,14 @@ docker pull $IMAGE:$DRONE_BUILD_NUMBER
 echo "Stopping and removing old container"
 docker stop minitwit-server && docker rm minitwit-server
 echo "Starting container with new image"
-docker run --name minitwit-server -p 8080:8080 --restart always -d $IMAGE:$DRONE_BUILD_NUMBER
+docker run \
+    --name minitwit-server \
+    -p 80:8080 \
+    -v /opt/minitwit:/opt/minitwit \
+    -e "MINITWIT_DB=/opt/minitwit/minitwit.db" \
+    --restart always \
+    -d \
+    $IMAGE:$DRONE_BUILD_NUMBER
 # Based on https://medium.com/rahasak/delete-docker-image-with-all-tags-c631f6049530
 # Removes all images containing the string $IMAGE except one with DRONE_BUILD_NUMBER
 echo "Removing images"
